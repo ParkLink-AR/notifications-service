@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+coverage.xml
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Local test database
+test*.db
+
+# Firebase service-account credentials -- never commit
+secrets/
+*firebase*service-account*.json
+google-services.json
+GoogleService-Info.plist

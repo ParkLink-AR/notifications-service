@@ -1,0 +1,60 @@
+# Levanta notifications-service en aislamiento para desarrollo/tests:
+# su base de datos + RabbitMQ + el servicio. Para el ecosistema completo
+# usar root/compose.yaml.
+#
+# Uso:
+#   cp .env.example .env
+#   # dejar el JSON de Firebase en ./secrets/firebase-service-account.json
+#   docker compose up --build
+
+services:
+  db-notifications:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=parklink_notif
+      - POSTGRES_PASSWORD=parklink_notif
+      - POSTGRES_DB=parklink_notif_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - parklink_notif_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parklink_notif -d parklink_notif_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  notifications-service:
+    build: .
+    ports:
+      - "8085:8000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://parklink_notif:parklink_notif@db-notifications:5432/parklink_notif_db
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - EVENTS_EXCHANGE=${EVENTS_EXCHANGE:-parklink.events}
+      - NOTIFICATIONS_QUEUE=${NOTIFICATIONS_QUEUE:-notifications.events}
+      - PARKING_SERVICE_URL=${PARKING_SERVICE_URL:-http://parking-service:3001}
+      - GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/firebase-service-account.json
+      - CONSUMER_ENABLED=true
+    volumes:
+      - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+    depends_on:
+      db-notifications:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  parklink_notif_db_data:
