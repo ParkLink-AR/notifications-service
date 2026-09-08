@@ -38,15 +38,15 @@ def _fmt_datetime(when: datetime) -> str:
 
 def booking_confirmed_for_driver(spot_title: str, start: datetime, end: datetime) -> PushMessage:
     return PushMessage(
-        title="Reserva confirmada",
-        body=f"Tu reserva en {spot_title} {_fmt_range(start, end)} está confirmada.",
+        title="✅ ¡Reserva confirmada!",
+        body=f"Tu lugar en {spot_title} para {_fmt_range(start, end)} ya está confirmado. ¡Buen viaje! 🚗",
     )
 
 
 def booking_confirmed_for_owner(spot_title: str, start: datetime, end: datetime) -> PushMessage:
     return PushMessage(
-        title="Nueva reserva",
-        body=f"Reservaron tu cochera {spot_title} {_fmt_range(start, end)}.",
+        title="🎉 Nueva reserva en tu cochera",
+        body=f"Reservaron {spot_title} para {_fmt_range(start, end)}.",
     )
 
 
@@ -55,9 +55,9 @@ def booking_pending_approval_for_owner(
 ) -> PushMessage:
     """Sent to the owner right after the driver pays: they must accept or reject."""
     body = (
-        f"Reservaron y pagaron {spot_title} {_fmt_range(start, end)}. "
-        "Confirmá o rechazá la reserva"
+        f"Alguien reservó y pagó {spot_title} para {_fmt_range(start, end)}. "
+        "Aceptá o rechazá la reserva desde la app"
     )
     if deadline is not None:
         body += f" antes del {_fmt_datetime(deadline)}"
-    return PushMessage(title="Confirmá una reserva", body=body + ".")
+    return PushMessage(title="🔔 Tenés una reserva para confirmar", body=body + ".")

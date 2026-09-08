@@ -7,6 +7,10 @@ from app.config import settings
 from app.handlers.outbound import OutboundPush
 from app.models import DeviceToken
 
+# ParkLink brand teal (src/theme/light in the mobile app). Tints the OS-shown
+# Android notification.
+BRAND_COLOR = "#168B8D"
+
 try:  # firebase-admin is optional for tooling / log-only mode
     import firebase_admin
     from firebase_admin import credentials, messaging
@@ -103,7 +107,17 @@ def send_pushes(db: Session, pushes: list[OutboundPush]) -> int:
             token=token,
             notification=messaging.Notification(title=push.title, body=push.body),
             data={k: str(v) for k, v in push.data.items()},
-            android=messaging.AndroidConfig(priority="high"),
+            android=messaging.AndroidConfig(
+                priority="high",
+                # Small icon comes from the app's expo-notifications config
+                # plugin (ParkLink mark); this tints it and routes the
+                # OS-shown notification to the app's HIGH-importance "bookings"
+                # channel so it pops as a heads-up banner.
+                notification=messaging.AndroidNotification(
+                    color=BRAND_COLOR,
+                    channel_id="bookings",
+                ),
+            ),
             apns=messaging.APNSConfig(
                 payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))
             ),

@@ -28,7 +28,7 @@ def test_notifies_the_owner_with_the_deadline():
     pushes = build_booking_pending_approval_pushes(_event())
 
     assert [p.user_id for p in pushes] == [OWNER]
-    assert pushes[0].title == "Confirmá una reserva"
+    assert "reserva para confirmar" in pushes[0].title
     assert "Cochera Palermo" in pushes[0].body
     assert "de 18:00 a 20:00" in pushes[0].body
     assert "antes del 5 de septiembre a las 18:00" in pushes[0].body

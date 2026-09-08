@@ -27,7 +27,7 @@ def test_notifies_only_the_driver_in_the_normal_flow():
     pushes = build_booking_confirmed_pushes(_event())
 
     assert [p.user_id for p in pushes] == [DRIVER]
-    assert pushes[0].title == "Reserva confirmada"
+    assert "Reserva confirmada" in pushes[0].title
     assert "Cochera Palermo" in pushes[0].body
     assert "de 18:00 a 20:00" in pushes[0].body
     assert pushes[0].data == {"type": "booking.confirmed", "bookingId": "book-1"}
@@ -37,8 +37,8 @@ def test_also_notifies_the_owner_when_auto_confirmed():
     pushes = build_booking_confirmed_pushes(_event(auto_confirmed=True))
 
     assert [p.user_id for p in pushes] == [DRIVER, OWNER]
-    assert pushes[1].title == "Nueva reserva"
-    assert "Reservaron tu cochera Cochera Palermo" in pushes[1].body
+    assert "Nueva reserva" in pushes[1].title
+    assert "Reservaron Cochera Palermo" in pushes[1].body
 
 
 def test_no_owner_push_when_owner_is_the_driver_even_if_auto_confirmed():
