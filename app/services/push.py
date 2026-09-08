@@ -4,7 +4,7 @@ from loguru import logger
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.handlers.booking_confirmed import OutboundPush
+from app.handlers.outbound import OutboundPush
 from app.models import DeviceToken
 
 try:  # firebase-admin is optional for tooling / log-only mode

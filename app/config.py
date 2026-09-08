@@ -10,17 +10,14 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://parklink_notif:parklink_notif@db-notifications:5432/parklink_notif_db"
 
     # Shared event bus. Same exchange gateway/app/rabbitmq.py and
-    # booking-service/cmd/setup_rabbitmq.go declare.
+    # booking-service/cmd/setup_rabbitmq.go declare. The booking.* events are
+    # self-contained (spot title + both party ids embedded by booking-service),
+    # so this service makes no outbound calls to resolve a recipient.
     RABBITMQ_URL: str = "amqp://guest:guest@rabbitmq:5672/"
     EVENTS_EXCHANGE: str = "parklink.events"
     # Our OWN queue -- not booking-service's "events.notifications" (that one is
     # its own log-only consumer). Distinct queues each get their own copy.
     NOTIFICATIONS_QUEUE: str = "notifications.events"
-
-    # booking.confirmed carries the driver and the spot id, but not the owner
-    # or a human title -- resolved from parking-service (public GET route).
-    PARKING_SERVICE_URL: str = "http://parking-service:3001"
-    UPSTREAM_TIMEOUT_SECONDS: float = 10.0
 
     # Path to the Firebase service-account JSON used by the Admin SDK. Empty =
     # run the push sender in log-only mode (tests, or local without Firebase).
