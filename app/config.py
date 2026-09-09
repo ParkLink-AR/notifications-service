@@ -21,7 +21,10 @@ class Settings(BaseSettings):
 
     # Path to the Firebase service-account JSON used by the Admin SDK. Empty =
     # run the push sender in log-only mode (tests, or local without Firebase).
-    GOOGLE_APPLICATION_CREDENTIALS: str = ""
+    # Firebase service-account JSON. Committed at ./secrets (private repo); this
+    # default is used when running the service directly. In docker it's set to
+    # /run/secrets/firebase-service-account.json by compose. Empty = log-only.
+    GOOGLE_APPLICATION_CREDENTIALS: str = "./secrets/firebase-service-account.json"
 
     # The AMQP consumer starts with the app. Disabled in the test suite.
     CONSUMER_ENABLED: bool = True

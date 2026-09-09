@@ -36,8 +36,15 @@ def init_firebase() -> None:
     if firebase_admin is None:
         logger.warning("[push] firebase-admin not installed -- sender in log-only mode")
         return
-    cred = credentials.Certificate(settings.GOOGLE_APPLICATION_CREDENTIALS)
-    _firebase_app = firebase_admin.initialize_app(cred)
+    try:
+        cred = credentials.Certificate(settings.GOOGLE_APPLICATION_CREDENTIALS)
+        _firebase_app = firebase_admin.initialize_app(cred)
+    except (FileNotFoundError, ValueError) as exc:
+        logger.warning(
+            f"[push] could not load {settings.GOOGLE_APPLICATION_CREDENTIALS} ({exc}) "
+            "-- sender in log-only mode"
+        )
+        return
     logger.info("[push] Firebase Admin initialised")
 
 
