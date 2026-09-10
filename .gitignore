@@ -26,7 +26,8 @@ ENV/
 test*.db
 
 # Firebase service-account credentials -- never commit
-secrets/
-*firebase*service-account*.json
+secrets/*
+# ...except the Firebase key -- committed on purpose (private personal project)
+!secrets/firebase-service-account.json
 google-services.json
 GoogleService-Info.plist

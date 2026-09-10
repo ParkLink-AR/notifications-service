@@ -5,22 +5,45 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
-class BookingConfirmedEvent(BaseModel):
-    """`booking.confirmed`, published by booking-service on the RabbitMQ topic
-    exchange `parklink.events` when a PENDING_PAYMENT booking transitions to
-    CONFIRMED. `owner_user_id` and the spot title are NOT in the event --
-    booking-service doesn't have them; notifications-service resolves them from
-    parking-service (see app/services/recipients.py)."""
+class _BookingEvent(BaseModel):
+    """Shared shape of every `booking.*` domain event published by booking-service
+    on the RabbitMQ topic exchange `parklink.events`.
+
+    The events are self-contained: booking-service embeds the spot title and both
+    party ids (it already fetches the spot in these flows), so notifications-service
+    does not call any other service to build a push. `parking_spot_title` may be an
+    empty string if booking-service could not resolve it -- templates fall back to a
+    generic label."""
 
     model_config = ConfigDict(extra="ignore")
 
     event_id: str
-    event_type: str = "booking.confirmed"
+    event_type: str
     occurred_at: datetime | None = None
     booking_id: str
     parking_spot_id: str
+    parking_spot_title: str = ""
+    owner_user_id: str | None = None
     driver_user_id: str
     start: datetime
     end: datetime
     amount: int | None = None
     payment_id: str | None = None
+
+
+class BookingConfirmedEvent(_BookingEvent):
+    """`booking.confirmed` -- the booking is CONFIRMED, either because the owner
+    approved it or because the spot is instant-booking (`auto_confirmed=True`, the
+    owner never acted)."""
+
+    event_type: str = "booking.confirmed"
+    auto_confirmed: bool = False
+
+
+class BookingPendingApprovalEvent(_BookingEvent):
+    """`booking.pending_approval` -- the driver paid and the booking is now
+    PENDING_OWNER_APPROVAL, waiting for the owner to accept or reject it before
+    `owner_response_deadline` (after which booking-service auto-cancels + refunds)."""
+
+    event_type: str = "booking.pending_approval"
+    owner_response_deadline: datetime | None = None
