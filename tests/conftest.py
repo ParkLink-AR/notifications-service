@@ -3,6 +3,7 @@ import os
 os.environ["DATABASE_URL"] = "sqlite:///./test_notifications.db"
 os.environ["CONSUMER_ENABLED"] = "false"
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = ""
+os.environ["PARKING_SERVICE_URL"] = "http://parking-service.test"
 
 import pytest
 from fastapi.testclient import TestClient

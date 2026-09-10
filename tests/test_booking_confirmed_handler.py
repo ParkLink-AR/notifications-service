@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 
-from app.handlers.booking_confirmed import build_booking_confirmed_pushes
+from app.handlers import booking_confirmed as handler
 from app.messaging.events import BookingConfirmedEvent
+from app.services.recipients import SpotInfo
 
 DRIVER = "11111111-1111-1111-1111-111111111111"
 OWNER = "22222222-2222-2222-2222-222222222222"
@@ -13,8 +14,6 @@ def _event(**overrides) -> BookingConfirmedEvent:
         event_type="booking.confirmed",
         booking_id="book-1",
         parking_spot_id="spot-1",
-        parking_spot_title="Cochera Palermo",
-        owner_user_id=OWNER,
         driver_user_id=DRIVER,
         start=datetime(2026, 9, 4, 21, 0, tzinfo=timezone.utc),  # 18:00 ART
         end=datetime(2026, 9, 4, 23, 0, tzinfo=timezone.utc),    # 20:00 ART
@@ -23,32 +22,42 @@ def _event(**overrides) -> BookingConfirmedEvent:
     return BookingConfirmedEvent(**base)
 
 
-def test_notifies_only_the_driver_in_the_normal_flow():
-    pushes = build_booking_confirmed_pushes(_event())
+async def test_builds_driver_and_owner_pushes(monkeypatch):
+    async def fake_resolve(_spot_id):
+        return SpotInfo(owner_id=OWNER, title="Cochera Palermo")
 
-    assert [p.user_id for p in pushes] == [DRIVER]
-    assert "Reserva confirmada" in pushes[0].title
+    monkeypatch.setattr(handler, "resolve_spot", fake_resolve)
+
+    pushes = await handler.build_booking_confirmed_pushes(_event())
+
+    assert [p.user_id for p in pushes] == [DRIVER, OWNER]
+    assert pushes[0].title == "Reserva confirmada"
     assert "Cochera Palermo" in pushes[0].body
     assert "de 18:00 a 20:00" in pushes[0].body
     assert pushes[0].data == {"type": "booking.confirmed", "bookingId": "book-1"}
+    assert pushes[1].title == "Nueva reserva"
+    assert "Reservaron tu cochera Cochera Palermo" in pushes[1].body
 
 
-def test_also_notifies_the_owner_when_auto_confirmed():
-    pushes = build_booking_confirmed_pushes(_event(auto_confirmed=True))
+async def test_no_owner_push_when_owner_is_the_driver(monkeypatch):
+    async def fake_resolve(_spot_id):
+        return SpotInfo(owner_id=DRIVER, title="Mi Cochera")
 
-    assert [p.user_id for p in pushes] == [DRIVER, OWNER]
-    assert "Nueva reserva" in pushes[1].title
-    assert "Reservaron Cochera Palermo" in pushes[1].body
+    monkeypatch.setattr(handler, "resolve_spot", fake_resolve)
 
-
-def test_no_owner_push_when_owner_is_the_driver_even_if_auto_confirmed():
-    pushes = build_booking_confirmed_pushes(_event(auto_confirmed=True, owner_user_id=DRIVER))
+    pushes = await handler.build_booking_confirmed_pushes(_event())
 
     assert len(pushes) == 1
     assert pushes[0].user_id == DRIVER
 
 
-def test_falls_back_to_generic_title_when_not_embedded():
-    pushes = build_booking_confirmed_pushes(_event(parking_spot_title=""))
+async def test_falls_back_to_generic_title_when_spot_missing(monkeypatch):
+    async def fake_resolve(_spot_id):
+        return SpotInfo(owner_id=None, title="tu cochera")
 
+    monkeypatch.setattr(handler, "resolve_spot", fake_resolve)
+
+    pushes = await handler.build_booking_confirmed_pushes(_event())
+
+    assert len(pushes) == 1
     assert "tu cochera" in pushes[0].body

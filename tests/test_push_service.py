@@ -1,4 +1,4 @@
-from app.handlers.outbound import OutboundPush
+from app.handlers.booking_confirmed import OutboundPush
 from app.models import DeviceToken
 from app.services import push
 
