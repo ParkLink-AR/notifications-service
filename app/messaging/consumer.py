@@ -2,47 +2,71 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import Awaitable, Callable
 
 import aio_pika
 from loguru import logger
+from pydantic import BaseModel
+from sqlalchemy.exc import OperationalError
 
 from app.config import settings
 from app.database import SessionLocal
 from app.handlers.booking_confirmed import build_booking_confirmed_pushes
-from app.messaging.events import BookingConfirmedEvent
+from app.handlers.booking_pending_approval import build_booking_pending_approval_pushes
+from app.handlers.outbound import OutboundPush
+from app.messaging.events import BookingConfirmedEvent, BookingPendingApprovalEvent
 from app.models import ProcessedEvent
 from app.services import push
-from app.services.recipients import RecipientResolutionError
 
-# Add a routing key + a handler here to support another event. Nothing else
-# needs to change.
-BINDING_KEYS = ["booking.confirmed"]
+# Add a routing key + an entry in HANDLERS to support another event. Nothing
+# else needs to change.
+BINDING_KEYS = ["booking.confirmed", "booking.pending_approval"]
 
 RETRY_DELAY_SECONDS = 5
 
 
-async def _handle_booking_confirmed(body: dict, session_factory=SessionLocal) -> None:
-    event = BookingConfirmedEvent.model_validate(body)
+def _process_event(
+    body: dict,
+    event_cls: type[BaseModel],
+    build_pushes: Callable[..., list[OutboundPush]],
+    session_factory,
+) -> None:
+    """Shared pipeline: validate -> skip if already processed -> build pushes ->
+    send -> record. RabbitMQ is at-least-once, so ProcessedEvent is the dedupe key."""
+    event = event_cls.model_validate(body)
     db = session_factory()
     try:
         if db.get(ProcessedEvent, event.event_id) is not None:
             logger.info(f"[consumer] event {event.event_id} already processed, skipping")
             return
-        pushes = await build_booking_confirmed_pushes(event)
+        pushes = build_pushes(event)
         push.send_pushes(db, pushes)
         db.add(ProcessedEvent(event_id=event.event_id, event_type=event.event_type))
         db.commit()
         logger.info(
-            f"[consumer] handled booking.confirmed event={event.event_id} pushes={len(pushes)}"
+            f"[consumer] handled {event.event_type} event={event.event_id} pushes={len(pushes)}"
         )
     finally:
         db.close()
 
 
-HANDLERS = {"booking.confirmed": _handle_booking_confirmed}
+async def _handle_booking_confirmed(body: dict, session_factory=SessionLocal) -> None:
+    _process_event(body, BookingConfirmedEvent, build_booking_confirmed_pushes, session_factory)
+
+
+async def _handle_booking_pending_approval(body: dict, session_factory=SessionLocal) -> None:
+    _process_event(
+        body, BookingPendingApprovalEvent, build_booking_pending_approval_pushes, session_factory
+    )
+
+
+HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
+    "booking.confirmed": _handle_booking_confirmed,
+    "booking.pending_approval": _handle_booking_pending_approval,
+}
 
 # Failures that mean "try again later" rather than "this message is broken".
-TRANSIENT_ERRORS = (RecipientResolutionError, ConnectionError, TimeoutError)
+TRANSIENT_ERRORS = (ConnectionError, TimeoutError, OperationalError)
 
 
 class Consumer:
