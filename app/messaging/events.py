@@ -47,3 +47,12 @@ class BookingPendingApprovalEvent(_BookingEvent):
 
     event_type: str = "booking.pending_approval"
     owner_response_deadline: datetime | None = None
+
+
+class BookingVerifiedEvent(_BookingEvent):
+    """`booking.verified` -- the owner entered the driver's in-person verification
+    code correctly and the booking moved from CONFIRMED to IN_PROGRESS. No extra
+    fields beyond the shared base: the driver just needs to know their arrival was
+    confirmed."""
+
+    event_type: str = "booking.verified"

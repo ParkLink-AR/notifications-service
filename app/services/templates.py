@@ -50,6 +50,14 @@ def booking_confirmed_for_owner(spot_title: str, start: datetime, end: datetime)
     )
 
 
+def booking_verified_for_driver(spot_title: str) -> PushMessage:
+    """Sent to the driver once the owner enters their in-person verification code."""
+    return PushMessage(
+        title="🎉 Tu llegada fue confirmada",
+        body=f"El propietario de {spot_title} confirmó tu código. ¡Que disfrutes tu estadía!",
+    )
+
+
 def booking_pending_approval_for_owner(
     spot_title: str, start: datetime, end: datetime, deadline: datetime | None
 ) -> PushMessage:
