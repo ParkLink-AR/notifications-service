@@ -1,0 +1,38 @@
+from datetime import datetime, timezone
+
+from app.handlers.booking_verified import build_booking_verified_pushes
+from app.messaging.events import BookingVerifiedEvent
+
+DRIVER = "11111111-1111-1111-1111-111111111111"
+OWNER = "22222222-2222-2222-2222-222222222222"
+
+
+def _event(**overrides) -> BookingVerifiedEvent:
+    base = dict(
+        event_id="evt-1",
+        event_type="booking.verified",
+        booking_id="book-1",
+        parking_spot_id="spot-1",
+        parking_spot_title="Cochera Palermo",
+        owner_user_id=OWNER,
+        driver_user_id=DRIVER,
+        start=datetime(2026, 9, 4, 21, 0, tzinfo=timezone.utc),
+        end=datetime(2026, 9, 4, 23, 0, tzinfo=timezone.utc),
+    )
+    base.update(overrides)
+    return BookingVerifiedEvent(**base)
+
+
+def test_notifies_only_the_driver():
+    pushes = build_booking_verified_pushes(_event())
+
+    assert [p.user_id for p in pushes] == [DRIVER]
+    assert "confirmada" in pushes[0].title
+    assert "Cochera Palermo" in pushes[0].body
+    assert pushes[0].data == {"type": "booking.verified", "bookingId": "book-1"}
+
+
+def test_falls_back_to_generic_title_when_not_embedded():
+    pushes = build_booking_verified_pushes(_event(parking_spot_title=""))
+
+    assert "tu cochera" in pushes[0].body
