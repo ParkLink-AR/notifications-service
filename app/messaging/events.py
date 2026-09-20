@@ -32,12 +32,9 @@ class _BookingEvent(BaseModel):
 
 
 class BookingConfirmedEvent(_BookingEvent):
-    """`booking.confirmed` -- the booking is CONFIRMED, either because the owner
-    approved it or because the spot is instant-booking (`auto_confirmed=True`, the
-    owner never acted)."""
+    """`booking.confirmed` -- the owner approved a PENDING_OWNER_APPROVAL booking."""
 
     event_type: str = "booking.confirmed"
-    auto_confirmed: bool = False
 
 
 class BookingPendingApprovalEvent(_BookingEvent):

@@ -43,13 +43,6 @@ def booking_confirmed_for_driver(spot_title: str, start: datetime, end: datetime
     )
 
 
-def booking_confirmed_for_owner(spot_title: str, start: datetime, end: datetime) -> PushMessage:
-    return PushMessage(
-        title="🎉 Nueva reserva en tu cochera",
-        body=f"Reservaron {spot_title} para {_fmt_range(start, end)}.",
-    )
-
-
 def booking_verified_for_driver(spot_title: str) -> PushMessage:
     """Sent to the driver once the owner enters their in-person verification code."""
     return PushMessage(
