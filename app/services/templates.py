@@ -51,6 +51,19 @@ def booking_verified_for_driver(spot_title: str) -> PushMessage:
     )
 
 
+_MESSAGE_PREVIEW_MAX_LEN = 120
+
+
+def booking_message_received(spot_title: str, body: str) -> PushMessage:
+    """Sent to whichever side of a booking (driver or owner) did NOT just send the
+    message -- a short preview, same idea as any chat app's push notification."""
+    preview = body if len(body) <= _MESSAGE_PREVIEW_MAX_LEN else body[:_MESSAGE_PREVIEW_MAX_LEN - 1] + "…"
+    return PushMessage(
+        title=f"💬 Nuevo mensaje sobre {spot_title}",
+        body=preview,
+    )
+
+
 def booking_pending_approval_for_owner(
     spot_title: str, start: datetime, end: datetime, deadline: datetime | None
 ) -> PushMessage:
