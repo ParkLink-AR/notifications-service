@@ -53,3 +53,22 @@ class BookingVerifiedEvent(_BookingEvent):
     confirmed."""
 
     event_type: str = "booking.verified"
+
+
+class BookingMessageSentEvent(BaseModel):
+    """`booking.message_sent` -- either side of a booking (driver or owner) sent the
+    other a message. Deliberately not a `_BookingEvent` subclass: a chat message has
+    no time_range/amount/payment_id, and its "who gets notified" field is whichever
+    party did NOT send it, not always the driver."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    event_id: str
+    event_type: str = "booking.message_sent"
+    occurred_at: datetime | None = None
+    booking_id: str
+    parking_spot_id: str
+    parking_spot_title: str = ""
+    sender_user_id: str
+    recipient_user_id: str
+    body: str

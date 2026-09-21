@@ -12,11 +12,13 @@ from sqlalchemy.exc import OperationalError
 from app.config import settings
 from app.database import SessionLocal
 from app.handlers.booking_confirmed import build_booking_confirmed_pushes
+from app.handlers.booking_message_sent import build_booking_message_sent_pushes
 from app.handlers.booking_pending_approval import build_booking_pending_approval_pushes
 from app.handlers.booking_verified import build_booking_verified_pushes
 from app.handlers.outbound import OutboundPush
 from app.messaging.events import (
     BookingConfirmedEvent,
+    BookingMessageSentEvent,
     BookingPendingApprovalEvent,
     BookingVerifiedEvent,
 )
@@ -25,7 +27,12 @@ from app.services import push
 
 # Add a routing key + an entry in HANDLERS to support another event. Nothing
 # else needs to change.
-BINDING_KEYS = ["booking.confirmed", "booking.pending_approval", "booking.verified"]
+BINDING_KEYS = [
+    "booking.confirmed",
+    "booking.pending_approval",
+    "booking.verified",
+    "booking.message_sent",
+]
 
 RETRY_DELAY_SECONDS = 5
 
@@ -69,10 +76,17 @@ async def _handle_booking_verified(body: dict, session_factory=SessionLocal) -> 
     _process_event(body, BookingVerifiedEvent, build_booking_verified_pushes, session_factory)
 
 
+async def _handle_booking_message_sent(body: dict, session_factory=SessionLocal) -> None:
+    _process_event(
+        body, BookingMessageSentEvent, build_booking_message_sent_pushes, session_factory
+    )
+
+
 HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.confirmed": _handle_booking_confirmed,
     "booking.pending_approval": _handle_booking_pending_approval,
     "booking.verified": _handle_booking_verified,
+    "booking.message_sent": _handle_booking_message_sent,
 }
 
 # Failures that mean "try again later" rather than "this message is broken".
