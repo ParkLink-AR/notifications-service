@@ -16,11 +16,13 @@ from app.handlers.booking_message_sent import build_booking_message_sent_pushes
 from app.handlers.booking_pending_approval import build_booking_pending_approval_pushes
 from app.handlers.booking_verified import build_booking_verified_pushes
 from app.handlers.outbound import OutboundPush
+from app.handlers.support_ticket_replied import build_support_ticket_replied_pushes
 from app.messaging.events import (
     BookingConfirmedEvent,
     BookingMessageSentEvent,
     BookingPendingApprovalEvent,
     BookingVerifiedEvent,
+    SupportTicketRepliedEvent,
 )
 from app.models import ProcessedEvent
 from app.services import push
@@ -32,6 +34,7 @@ BINDING_KEYS = [
     "booking.pending_approval",
     "booking.verified",
     "booking.message_sent",
+    "support.ticket_replied",
 ]
 
 RETRY_DELAY_SECONDS = 5
@@ -82,11 +85,18 @@ async def _handle_booking_message_sent(body: dict, session_factory=SessionLocal)
     )
 
 
+async def _handle_support_ticket_replied(body: dict, session_factory=SessionLocal) -> None:
+    _process_event(
+        body, SupportTicketRepliedEvent, build_support_ticket_replied_pushes, session_factory
+    )
+
+
 HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.confirmed": _handle_booking_confirmed,
     "booking.pending_approval": _handle_booking_pending_approval,
     "booking.verified": _handle_booking_verified,
     "booking.message_sent": _handle_booking_message_sent,
+    "support.ticket_replied": _handle_support_ticket_replied,
 }
 
 # Failures that mean "try again later" rather than "this message is broken".

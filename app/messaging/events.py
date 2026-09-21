@@ -72,3 +72,20 @@ class BookingMessageSentEvent(BaseModel):
     sender_user_id: str
     recipient_user_id: str
     body: str
+
+
+class SupportTicketRepliedEvent(BaseModel):
+    """`support.ticket_replied` -- ParkLink staff replied to a support ticket from
+    admin-dashboard. Only fired for staff replies: a user replying to their own ticket
+    has no one to push to (staff work off admin-dashboard, not notifications)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    event_id: str
+    event_type: str = "support.ticket_replied"
+    occurred_at: datetime | None = None
+    ticket_id: str
+    booking_id: str
+    ticket_subject: str = ""
+    recipient_user_id: str
+    body: str
