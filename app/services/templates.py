@@ -64,6 +64,13 @@ def booking_message_received(spot_title: str, body: str) -> PushMessage:
     )
 
 
+def support_ticket_replied(subject: str, body: str) -> PushMessage:
+    """Sent to a ticket's creator when ParkLink staff reply from admin-dashboard."""
+    preview = body if len(body) <= _MESSAGE_PREVIEW_MAX_LEN else body[:_MESSAGE_PREVIEW_MAX_LEN - 1] + "…"
+    title = f"🎧 Soporte respondió: {subject}" if subject else "🎧 Soporte respondió tu ticket"
+    return PushMessage(title=title, body=preview)
+
+
 def booking_pending_approval_for_owner(
     spot_title: str, start: datetime, end: datetime, deadline: datetime | None
 ) -> PushMessage:
