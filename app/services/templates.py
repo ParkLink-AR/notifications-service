@@ -36,6 +36,13 @@ def _fmt_datetime(when: datetime) -> str:
     return f"{local.day} de {_MONTHS[local.month]} a las {local:%H:%M}"
 
 
+def _fmt_currency(cents: int) -> str:
+    """Formats an amount in centavos as Argentine pesos, e.g. 12345 -> "$123,45"."""
+    pesos, centavos = divmod(cents, 100)
+    thousands = f"{pesos:,}".replace(",", ".")
+    return f"${thousands},{centavos:02d}"
+
+
 def booking_confirmed_for_driver(spot_title: str, start: datetime, end: datetime) -> PushMessage:
     return PushMessage(
         title="✅ ¡Reserva confirmada!",
@@ -82,3 +89,12 @@ def booking_pending_approval_for_owner(
     if deadline is not None:
         body += f" antes del {_fmt_datetime(deadline)}"
     return PushMessage(title="🔔 Tenés una reserva para confirmar", body=body + ".")
+
+
+def payout_paid(spot_title: str, net_amount: int) -> PushMessage:
+    """Sent to the owner when ParkLink staff mark their payout as transferred."""
+    title = spot_title or DEFAULT_TITLE
+    return PushMessage(
+        title="💸 ¡Tu pago fue depositado!",
+        body=f"Depositamos {_fmt_currency(net_amount)} por {title} en tu cuenta.",
+    )

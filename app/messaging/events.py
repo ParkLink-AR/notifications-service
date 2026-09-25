@@ -89,3 +89,21 @@ class SupportTicketRepliedEvent(BaseModel):
     ticket_subject: str = ""
     recipient_user_id: str
     body: str
+
+
+class PayoutPaidEvent(BaseModel):
+    """`payout.paid` -- ParkLink staff manually marked an owner's payout as
+    transferred from admin-dashboard. Self-contained like every other event:
+    booking-service embeds the spot title and the amount, so no follow-up lookup
+    is needed to build the push."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    event_id: str
+    event_type: str = "payout.paid"
+    occurred_at: datetime | None = None
+    payout_id: str
+    booking_id: str
+    recipient_user_id: str
+    net_amount: int
+    parking_spot_title: str = ""
