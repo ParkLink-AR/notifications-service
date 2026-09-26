@@ -91,10 +91,11 @@ def booking_pending_approval_for_owner(
     return PushMessage(title="🔔 Tenés una reserva para confirmar", body=body + ".")
 
 
-def payout_paid(spot_title: str, net_amount: int) -> PushMessage:
-    """Sent to the owner when ParkLink staff mark their payout as transferred."""
-    title = spot_title or DEFAULT_TITLE
+def settlement_paid(net_amount: int, booking_count: int) -> PushMessage:
+    """Sent to the owner when an admin confirms a settlement's bank transfer,
+    which pays out one or more bookings' pending balances in a single transfer."""
+    reservas = "reserva" if booking_count == 1 else "reservas"
     return PushMessage(
         title="💸 ¡Tu pago fue depositado!",
-        body=f"Depositamos {_fmt_currency(net_amount)} por {title} en tu cuenta.",
+        body=f"Depositamos {_fmt_currency(net_amount)} correspondientes a {booking_count} {reservas}.",
     )

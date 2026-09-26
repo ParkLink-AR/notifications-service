@@ -91,19 +91,21 @@ class SupportTicketRepliedEvent(BaseModel):
     body: str
 
 
-class PayoutPaidEvent(BaseModel):
-    """`payout.paid` -- ParkLink staff manually marked an owner's payout as
-    transferred from admin-dashboard. Self-contained like every other event:
-    booking-service embeds the spot title and the amount, so no follow-up lookup
-    is needed to build the push."""
+class SettlementPaidEvent(BaseModel):
+    """`settlement.paid` -- an admin confirmed a settlement's bank transfer from
+    admin-dashboard. A settlement freezes an owner's entire pending balance across
+    potentially several bookings and pays it out in one transfer, replacing the old
+    per-booking `payout.paid` event. Self-contained like every other event:
+    booking-service embeds the total amount and how many bookings it covers, so no
+    follow-up lookup is needed to build the push. There is no single
+    `parking_spot_title` here since a settlement can span multiple different spots."""
 
     model_config = ConfigDict(extra="ignore")
 
     event_id: str
-    event_type: str = "payout.paid"
+    event_type: str = "settlement.paid"
     occurred_at: datetime | None = None
-    payout_id: str
-    booking_id: str
+    settlement_id: str
     recipient_user_id: str
     net_amount: int
-    parking_spot_title: str = ""
+    booking_count: int

@@ -16,14 +16,14 @@ from app.handlers.booking_message_sent import build_booking_message_sent_pushes
 from app.handlers.booking_pending_approval import build_booking_pending_approval_pushes
 from app.handlers.booking_verified import build_booking_verified_pushes
 from app.handlers.outbound import OutboundPush
-from app.handlers.payout_paid import build_payout_paid_pushes
+from app.handlers.settlement_paid import build_settlement_paid_pushes
 from app.handlers.support_ticket_replied import build_support_ticket_replied_pushes
 from app.messaging.events import (
     BookingConfirmedEvent,
     BookingMessageSentEvent,
     BookingPendingApprovalEvent,
     BookingVerifiedEvent,
-    PayoutPaidEvent,
+    SettlementPaidEvent,
     SupportTicketRepliedEvent,
 )
 from app.models import ProcessedEvent
@@ -37,7 +37,7 @@ BINDING_KEYS = [
     "booking.verified",
     "booking.message_sent",
     "support.ticket_replied",
-    "payout.paid",
+    "settlement.paid",
 ]
 
 RETRY_DELAY_SECONDS = 5
@@ -94,8 +94,8 @@ async def _handle_support_ticket_replied(body: dict, session_factory=SessionLoca
     )
 
 
-async def _handle_payout_paid(body: dict, session_factory=SessionLocal) -> None:
-    _process_event(body, PayoutPaidEvent, build_payout_paid_pushes, session_factory)
+async def _handle_settlement_paid(body: dict, session_factory=SessionLocal) -> None:
+    _process_event(body, SettlementPaidEvent, build_settlement_paid_pushes, session_factory)
 
 
 HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
@@ -104,7 +104,7 @@ HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.verified": _handle_booking_verified,
     "booking.message_sent": _handle_booking_message_sent,
     "support.ticket_replied": _handle_support_ticket_replied,
-    "payout.paid": _handle_payout_paid,
+    "settlement.paid": _handle_settlement_paid,
 }
 
 # Failures that mean "try again later" rather than "this message is broken".
