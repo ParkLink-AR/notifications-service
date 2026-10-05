@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy import text
 
+from app.trusted_caller import TrustedCallerMiddleware
 from app import models  # noqa: F401  -- registers models on Base before create_all
 from app.api.tokens import router as tokens_router
 from app.config import settings
@@ -47,6 +48,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ParkLink Notifications Service", version="1.0.0", lifespan=lifespan)
+
+app.add_middleware(TrustedCallerMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

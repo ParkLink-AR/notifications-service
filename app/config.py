@@ -4,6 +4,11 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
+    # Shared secrets proving a request came through the ParkLink gateway or from another
+    # ParkLink service (see app/trusted_caller.py). Both empty = every request passes, for
+    # a bare local run outside docker compose.
+    GATEWAY_INTERNAL_SECRET: str = ""
+    INTERNAL_SERVICE_KEY: str = ""
 
     # notifications-service owns a small DB: the user -> device-token map and a
     # log of already-processed event ids (RabbitMQ is at-least-once).
