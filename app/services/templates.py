@@ -99,3 +99,23 @@ def settlement_paid(net_amount: int, booking_count: int) -> PushMessage:
         title="💸 ¡Tu pago fue depositado!",
         body=f"Depositamos {_fmt_currency(net_amount)} correspondientes a {booking_count} {reservas}.",
     )
+
+
+def booking_cancelled_by_owner_account_for_driver(spot_title: str, start: datetime, end: datetime) -> PushMessage:
+    """The owner's account was closed or suspended: the driver's booking was cancelled and
+    fully refunded."""
+    return PushMessage(
+        title="Tu reserva fue cancelada",
+        body=(
+            f"Tu reserva en {spot_title} para {_fmt_range(start, end)} se canceló porque la "
+            "cochera dejó de estar disponible. Te devolvemos el total."
+        ),
+    )
+
+
+def booking_cancelled_by_driver_account_for_owner(spot_title: str, start: datetime, end: datetime) -> PushMessage:
+    """The driver's account was closed or suspended: their booking on the owner's spot is off."""
+    return PushMessage(
+        title="Se canceló una reserva",
+        body=f"La reserva en {spot_title} para {_fmt_range(start, end)} se canceló: el conductor ya no está en ParkLink.",
+    )

@@ -46,6 +46,15 @@ class BookingPendingApprovalEvent(_BookingEvent):
     owner_response_deadline: datetime | None = None
 
 
+class BookingCancelledEvent(_BookingEvent):
+    """`booking.cancelled` -- a booking that hadn't started was cancelled (with a full
+    refund to the driver) because one side's account was closed or suspended.
+    `cancelled_by` says which: "owner_account" (the spot's owner) or "driver_account"."""
+
+    event_type: str = "booking.cancelled"
+    cancelled_by: str
+
+
 class BookingVerifiedEvent(_BookingEvent):
     """`booking.verified` -- the owner entered the driver's in-person verification
     code correctly and the booking moved from CONFIRMED to IN_PROGRESS. No extra

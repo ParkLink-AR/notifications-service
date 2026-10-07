@@ -9,6 +9,8 @@ from app.models import DeviceToken
 from app.problem_json import problem_response
 
 router = APIRouter(prefix="/notifications", tags=["tokens"])
+# Service-to-service only (X-Internal-Key, see app/trusted_caller.py) -- no gateway route.
+internal_router = APIRouter(prefix="/internal", tags=["internal"])
 
 VALID_PLATFORMS = {"android", "ios"}
 
@@ -70,4 +72,13 @@ def delete_token(
     if row is not None:
         db.delete(row)
         db.commit()
+    return Response(status_code=204)
+
+
+@internal_router.delete("/users/{user_id}/device-tokens", status_code=204)
+def delete_user_tokens(user_id: str, db: Session = Depends(get_db)):
+    """Drops every device token of a user, so they get no more pushes -- called by
+    auth-service when the account is suspended or closed. Idempotent."""
+    db.query(DeviceToken).filter(DeviceToken.user_id == user_id).delete(synchronize_session=False)
+    db.commit()
     return Response(status_code=204)

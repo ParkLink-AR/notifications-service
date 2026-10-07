@@ -9,6 +9,7 @@ from sqlalchemy import text
 
 from app.trusted_caller import TrustedCallerMiddleware
 from app import models  # noqa: F401  -- registers models on Base before create_all
+from app.api.tokens import internal_router as internal_tokens_router
 from app.api.tokens import router as tokens_router
 from app.config import settings
 from app.database import Base, SessionLocal, engine
@@ -60,6 +61,7 @@ app.add_middleware(
 )
 
 app.include_router(tokens_router)
+app.include_router(internal_tokens_router)
 
 
 @app.get("/livez", tags=["health"])

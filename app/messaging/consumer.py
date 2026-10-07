@@ -11,6 +11,7 @@ from sqlalchemy.exc import OperationalError
 
 from app.config import settings
 from app.database import SessionLocal
+from app.handlers.booking_cancelled import build_booking_cancelled_pushes
 from app.handlers.booking_confirmed import build_booking_confirmed_pushes
 from app.handlers.booking_message_sent import build_booking_message_sent_pushes
 from app.handlers.booking_pending_approval import build_booking_pending_approval_pushes
@@ -19,6 +20,7 @@ from app.handlers.outbound import OutboundPush
 from app.handlers.settlement_paid import build_settlement_paid_pushes
 from app.handlers.support_ticket_replied import build_support_ticket_replied_pushes
 from app.messaging.events import (
+    BookingCancelledEvent,
     BookingConfirmedEvent,
     BookingMessageSentEvent,
     BookingPendingApprovalEvent,
@@ -38,6 +40,7 @@ BINDING_KEYS = [
     "booking.message_sent",
     "support.ticket_replied",
     "settlement.paid",
+    "booking.cancelled",
 ]
 
 RETRY_DELAY_SECONDS = 5
@@ -98,6 +101,10 @@ async def _handle_settlement_paid(body: dict, session_factory=SessionLocal) -> N
     _process_event(body, SettlementPaidEvent, build_settlement_paid_pushes, session_factory)
 
 
+async def _handle_booking_cancelled(body: dict, session_factory=SessionLocal) -> None:
+    _process_event(body, BookingCancelledEvent, build_booking_cancelled_pushes, session_factory)
+
+
 HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.confirmed": _handle_booking_confirmed,
     "booking.pending_approval": _handle_booking_pending_approval,
@@ -105,6 +112,7 @@ HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.message_sent": _handle_booking_message_sent,
     "support.ticket_replied": _handle_support_ticket_replied,
     "settlement.paid": _handle_settlement_paid,
+    "booking.cancelled": _handle_booking_cancelled,
 }
 
 # Failures that mean "try again later" rather than "this message is broken".

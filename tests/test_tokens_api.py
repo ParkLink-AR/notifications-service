@@ -64,3 +64,17 @@ def test_delete_token(client, db):
 def test_delete_unknown_token_is_noop(client):
     resp = client.delete("/notifications/tokens/nope", headers={"X-User-Id": USER_A})
     assert resp.status_code == 204
+
+
+def test_internal_delete_drops_every_token_of_the_user(client, db):
+    for token, user in (("tok-a1", USER_A), ("tok-a2", USER_A), ("tok-b1", USER_B)):
+        client.put(
+            "/notifications/tokens",
+            json={"token": token, "platform": "android"},
+            headers={"X-User-Id": user},
+        )
+
+    resp = client.delete(f"/internal/users/{USER_A}/device-tokens")
+
+    assert resp.status_code == 204
+    assert [row.token for row in db.query(DeviceToken).all()] == ["tok-b1"]
