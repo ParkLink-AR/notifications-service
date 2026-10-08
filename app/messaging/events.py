@@ -47,12 +47,22 @@ class BookingPendingApprovalEvent(_BookingEvent):
 
 
 class BookingCancelledEvent(_BookingEvent):
-    """`booking.cancelled` -- a booking that hadn't started was cancelled (with a full
-    refund to the driver) because one side's account was closed or suspended.
-    `cancelled_by` says which: "owner_account" (the spot's owner) or "driver_account"."""
+    """`booking.cancelled` -- a paid booking that hadn't started was cancelled, with a full
+    refund to the driver. `cancelled_by` says who or what called it off: "owner_rejected"
+    (the owner rejected the request), "owner_expired" (the owner never answered it in
+    time), "driver" (the driver cancelled it), or "owner_account" / "driver_account" (that
+    side's account was closed or suspended)."""
 
     event_type: str = "booking.cancelled"
     cancelled_by: str
+
+
+class BookingCompletedEvent(_BookingEvent):
+    """`booking.completed` -- the stay's time window is over: both sides are asked to
+    review each other. `owner_user_id` is missing when booking-service couldn't look up
+    the spot -- then only the driver is asked."""
+
+    event_type: str = "booking.completed"
 
 
 class BookingVerifiedEvent(_BookingEvent):
@@ -80,6 +90,9 @@ class BookingMessageSentEvent(BaseModel):
     parking_spot_title: str = ""
     sender_user_id: str
     recipient_user_id: str
+    # "driver" | "owner": which side of the booking the recipient is on. Empty from an
+    # older booking-service.
+    recipient_role: str = ""
     body: str
 
 
@@ -97,6 +110,9 @@ class SupportTicketRepliedEvent(BaseModel):
     booking_id: str
     ticket_subject: str = ""
     recipient_user_id: str
+    # "driver" | "owner": which side of the ticket's booking opened it. Empty when
+    # booking-service couldn't tell.
+    recipient_role: str = ""
     body: str
 
 

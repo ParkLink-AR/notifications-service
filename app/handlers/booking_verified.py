@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.handlers.outbound import OutboundPush
+from app.handlers.payloads import booking_payload
 from app.messaging.events import BookingVerifiedEvent
 from app.services import templates
 
@@ -15,4 +16,9 @@ def build_booking_verified_pushes(event: BookingVerifiedEvent) -> list[OutboundP
     data = {"type": "booking.verified", "bookingId": event.booking_id}
 
     msg = templates.booking_verified_for_driver(title)
-    return [OutboundPush(event.driver_user_id, msg.title, msg.body, data)]
+    return [
+        OutboundPush(
+            event.driver_user_id, msg.title, msg.body, data,
+            kind="driver_verified", role="driver", payload=booking_payload(event),
+        )
+    ]

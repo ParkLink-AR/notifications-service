@@ -27,13 +27,19 @@ class PushMessage:
 def _fmt_range(start: datetime, end: datetime) -> str:
     local_start = start.astimezone(BUENOS_AIRES)
     local_end = end.astimezone(BUENOS_AIRES)
-    fecha = f"{local_start.day} de {_MONTHS[local_start.month]}"
-    return f"el {fecha} de {local_start:%H:%M} a {local_end:%H:%M}"
+    if local_start.date() == local_end.date():
+        return f"el {_fmt_date(local_start)}, de {local_start:%H:%M} a {local_end:%H:%M}"
+    return f"del {_fmt_date(local_start)} a las {local_start:%H:%M} al {_fmt_date(local_end)} a las {local_end:%H:%M}"
+
+
+def _fmt_date(local: datetime) -> str:
+    """"14 de septiembre de 2026" -- the app's long date format."""
+    return f"{local.day} de {_MONTHS[local.month]} de {local.year}"
 
 
 def _fmt_datetime(when: datetime) -> str:
     local = when.astimezone(BUENOS_AIRES)
-    return f"{local.day} de {_MONTHS[local.month]} a las {local:%H:%M}"
+    return f"{_fmt_date(local)} a las {local:%H:%M}"
 
 
 def _fmt_currency(cents: int) -> str:
@@ -118,4 +124,50 @@ def booking_cancelled_by_driver_account_for_owner(spot_title: str, start: dateti
     return PushMessage(
         title="Se canceló una reserva",
         body=f"La reserva en {spot_title} para {_fmt_range(start, end)} se canceló: el conductor ya no está en ParkLink.",
+    )
+
+
+def booking_rejected_for_driver(spot_title: str, start: datetime, end: datetime) -> PushMessage:
+    """The owner rejected the driver's booking request; the payment is refunded."""
+    return PushMessage(
+        title="Tu reserva fue rechazada",
+        body=(
+            f"El propietario de {spot_title} no pudo aceptar tu reserva para {_fmt_range(start, end)}. "
+            "Te devolvemos el total."
+        ),
+    )
+
+
+def booking_request_expired_for_driver(spot_title: str, start: datetime, end: datetime) -> PushMessage:
+    """The owner never answered the driver's booking request in time; it was refunded."""
+    return PushMessage(
+        title="Tu reserva no fue confirmada",
+        body=(
+            f"El propietario de {spot_title} no respondió a tiempo tu reserva para {_fmt_range(start, end)}. "
+            "Te devolvemos el total."
+        ),
+    )
+
+
+def booking_cancelled_by_driver_for_owner(spot_title: str, start: datetime, end: datetime) -> PushMessage:
+    """The driver cancelled their booking on the owner's spot -- the slot is free again."""
+    return PushMessage(
+        title="Se canceló una reserva",
+        body=f"El conductor canceló su reserva en {spot_title} para {_fmt_range(start, end)}. El horario vuelve a estar libre.",
+    )
+
+
+def booking_completed_for_driver(spot_title: str) -> PushMessage:
+    """The stay is over: the driver is asked to review the spot and its owner."""
+    return PushMessage(
+        title="⭐ ¿Cómo te fue?",
+        body=f"Tu estadía en {spot_title} terminó. Calificá la cochera y al propietario.",
+    )
+
+
+def booking_completed_for_owner(spot_title: str) -> PushMessage:
+    """The stay is over: the owner is asked to review the driver."""
+    return PushMessage(
+        title="⭐ Calificá al conductor",
+        body=f"Terminó la reserva en {spot_title}. Contanos cómo fue el conductor.",
     )

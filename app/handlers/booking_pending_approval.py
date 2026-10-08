@@ -3,6 +3,7 @@ from __future__ import annotations
 from loguru import logger
 
 from app.handlers.outbound import OutboundPush
+from app.handlers.payloads import booking_payload
 from app.messaging.events import BookingPendingApprovalEvent
 from app.services import templates
 
@@ -28,4 +29,13 @@ def build_booking_pending_approval_pushes(
         title, event.start, event.end, event.owner_response_deadline
     )
     data = {"type": "booking.pending_approval", "bookingId": event.booking_id}
-    return [OutboundPush(event.owner_user_id, msg.title, msg.body, data)]
+    payload = booking_payload(event)
+    payload["owner_response_deadline"] = (
+        event.owner_response_deadline.isoformat() if event.owner_response_deadline else None
+    )
+    return [
+        OutboundPush(
+            event.owner_user_id, msg.title, msg.body, data,
+            kind="owner_request", role="owner", payload=payload,
+        )
+    ]

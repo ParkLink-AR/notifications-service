@@ -31,7 +31,7 @@ def test_notifies_the_owner_with_the_deadline():
     assert "reserva para confirmar" in pushes[0].title
     assert "Cochera Palermo" in pushes[0].body
     assert "de 18:00 a 20:00" in pushes[0].body
-    assert "antes del 5 de septiembre a las 18:00" in pushes[0].body
+    assert "antes del 5 de septiembre de 2026 a las 18:00" in pushes[0].body
     assert pushes[0].data == {"type": "booking.pending_approval", "bookingId": "book-1"}
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from loguru import logger
 
 from app.handlers.outbound import OutboundPush
+from app.handlers.payloads import preview
 from app.messaging.events import BookingMessageSentEvent
 from app.services import templates
 
@@ -25,4 +26,15 @@ def build_booking_message_sent_pushes(event: BookingMessageSentEvent) -> list[Ou
     title = event.parking_spot_title or templates.DEFAULT_TITLE
     msg = templates.booking_message_received(title, event.body)
     data = {"type": "booking.message_sent", "bookingId": event.booking_id}
-    return [OutboundPush(event.recipient_user_id, msg.title, msg.body, data)]
+    payload = {
+        "booking_id": event.booking_id,
+        "parking_spot_id": event.parking_spot_id,
+        "spot_title": event.parking_spot_title,
+        "preview": preview(event.body),
+    }
+    return [
+        OutboundPush(
+            event.recipient_user_id, msg.title, msg.body, data,
+            kind="message_received", role=event.recipient_role or None, payload=payload,
+        )
+    ]

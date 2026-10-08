@@ -17,4 +17,14 @@ def build_settlement_paid_pushes(event: SettlementPaidEvent) -> list[OutboundPus
 
     msg = templates.settlement_paid(event.net_amount, event.booking_count)
     data = {"type": "settlement.paid", "settlementId": event.settlement_id}
-    return [OutboundPush(event.recipient_user_id, msg.title, msg.body, data)]
+    payload = {
+        "settlement_id": event.settlement_id,
+        "net_amount": event.net_amount,
+        "booking_count": event.booking_count,
+    }
+    return [
+        OutboundPush(
+            event.recipient_user_id, msg.title, msg.body, data,
+            kind="owner_settlement_paid", role="owner", payload=payload,
+        )
+    ]

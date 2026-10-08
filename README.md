@@ -1,14 +1,15 @@
 # notifications-service
 
-Envío de **push notifications** a conductores y propietarios de ParkLink.
+Las notificaciones de conductores y propietarios de ParkLink: la **bandeja** de cada
+usuario (la pestaña Notificaciones de la app y su contador de no leídas) y los **push**
+por **Firebase Cloud Messaging** (Android + iOS) con el **Firebase Admin SDK**.
 
-No se dispara vía REST de negocio: **consume eventos** publicados por `booking-service`
-(y a futuro `payment-service`) en el exchange topic `parklink.events` de RabbitMQ, y
-entrega las notificaciones por **Firebase Cloud Messaging** (Android + iOS) usando el
-**Firebase Admin SDK**.
-
-La única superficie HTTP es el registro del **device token** de cada dispositivo
-(la app necesita mandarlo por algún lado).
+Se alimenta de los **eventos** que publica `booking-service` en el exchange topic
+`parklink.events` de RabbitMQ. Por cada evento que le toca a un usuario guarda una entrada
+en su bandeja (tabla `notifications`), le manda el push y publica `notification.created`
+para que el gateway le avise al instante a la app abierta (WebSocket
+`/notifications/live`, ver `gateway/app/live.py`). La bandeja es la fuente de verdad: el
+push y el aviso en vivo son solo avisos de que hay algo nuevo.
 
 Construido con **FastAPI** + **SQLAlchemy** + **aio-pika** + **firebase-admin**, mismas
 convenciones que `auth-service` / `gateway` (problem+json, `loguru`, `/livez` `/readyz`,
@@ -21,15 +22,37 @@ esquema por `Base.metadata.create_all`, sin migraciones).
 `app/messaging/consumer.py` declara una queue **propia** (`notifications.events`) bindeada
 al exchange `parklink.events`, con `prefetch=10` y **ack manual**.
 
-| Routing key | Handler | Resultado |
+| Routing key | Handler | Para quién (`kind` en la bandeja) |
 |---|---|---|
-| `booking.confirmed` | `app/handlers/booking_confirmed.py` | push al **conductor** ("Reserva confirmada") y al **propietario** ("Nueva reserva") |
+| `booking.pending_approval` | `booking_pending_approval.py` | propietario (`owner_request`) |
+| `booking.confirmed` | `booking_confirmed.py` | conductor (`driver_confirmed`) |
+| `booking.cancelled` | `booking_cancelled.py` | según `cancelled_by`: conductor (`driver_rejected`, `driver_request_expired`, `driver_spot_unavailable`) o propietario (`owner_booking_cancelled`) |
+| `booking.verified` | `booking_verified.py` | conductor (`driver_verified`) |
+| `booking.completed` | `booking_completed.py` | conductor (`driver_review_prompt`) y propietario (`owner_review_prompt`) |
+| `booking.message_sent` | `booking_message_sent.py` | el otro lado de la reserva (`message_received`) |
+| `support.ticket_replied` | `support_ticket_replied.py` | quien abrió el ticket (`ticket_replied`) |
+| `settlement.paid` | `settlement_paid.py` | propietario (`owner_settlement_paid`) |
 
-Sumar otro evento (`booking.cancelled`, `payment.completed`, …) = agregar una entrada a
-`BINDING_KEYS` y una función a `HANDLERS`.
+Sumar otro evento = agregar una entrada a `BINDING_KEYS` y una función a `HANDLERS`.
+`booking.confirmed` y `booking.cancelled` además marcan como respondida (`resolved_at`) la
+solicitud del propietario sobre esa reserva, así la app deja de ofrecer aceptar/rechazar.
 
 **Idempotencia:** RabbitMQ entrega *at-least-once*. Antes de actuar, el consumer chequea
-la tabla `processed_events` por `event_id` y saltea los duplicados.
+la tabla `processed_events` por `event_id` y saltea los duplicados. La entrada de la bandeja
+y la marca de procesado se guardan en la misma transacción, así un evento repetido nunca
+duplica una notificación; el push se manda después (si falla, la notificación igual queda).
+
+### Bandeja (vía gateway, autenticada)
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /notifications?limit=50&before=<iso>` | Las notificaciones del usuario, de la más nueva a la más vieja, con `unread_count` y `next_before` para la página siguiente |
+| `GET /notifications/unread-count` | Solo el contador de no leídas |
+| `POST /notifications/read` `{"ids": [...]}` | Marca como leídas esas (o todas, sin `ids`); devuelve el nuevo `unread_count` |
+| `DELETE /internal/users/{id}/notifications` | Solo entre servicios: auth-service borra la bandeja al eliminar la cuenta |
+
+Cada entrada trae `kind`, `role` (`driver`/`owner`) y `data` (cochera, fechas, ids): la app
+arma el texto en el idioma del usuario. `title`/`body` son los textos del push en castellano.
 
 **Reintentos:** si el handler falla por algo transitorio (parking-service caído, timeout),
 el mensaje se re-encola (`nack requeue=True`). Un payload malformado se descarta (ack) para
