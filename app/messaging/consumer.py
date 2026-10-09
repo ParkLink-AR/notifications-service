@@ -19,6 +19,7 @@ from app.handlers.booking_message_sent import build_booking_message_sent_pushes
 from app.handlers.booking_pending_approval import build_booking_pending_approval_pushes
 from app.handlers.booking_verified import build_booking_verified_pushes
 from app.handlers.outbound import OutboundPush
+from app.handlers.parking_spot_reviewed import build_parking_spot_reviewed_pushes
 from app.handlers.settlement_paid import build_settlement_paid_pushes
 from app.handlers.support_ticket_replied import build_support_ticket_replied_pushes
 from app.messaging import live
@@ -29,6 +30,7 @@ from app.messaging.events import (
     BookingMessageSentEvent,
     BookingPendingApprovalEvent,
     BookingVerifiedEvent,
+    ParkingSpotReviewedEvent,
     SettlementPaidEvent,
     SupportTicketRepliedEvent,
 )
@@ -46,6 +48,7 @@ BINDING_KEYS = [
     "settlement.paid",
     "booking.cancelled",
     "booking.completed",
+    "parking_spot.reviewed",
 ]
 
 # Events after which a booking request no longer waits for the owner's answer.
@@ -164,6 +167,10 @@ async def _handle_booking_completed(body: dict, session_factory=SessionLocal) ->
     await _run(body, BookingCompletedEvent, build_booking_completed_pushes, session_factory)
 
 
+async def _handle_parking_spot_reviewed(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, ParkingSpotReviewedEvent, build_parking_spot_reviewed_pushes, session_factory)
+
+
 HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.confirmed": _handle_booking_confirmed,
     "booking.pending_approval": _handle_booking_pending_approval,
@@ -173,6 +180,7 @@ HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "settlement.paid": _handle_settlement_paid,
     "booking.cancelled": _handle_booking_cancelled,
     "booking.completed": _handle_booking_completed,
+    "parking_spot.reviewed": _handle_parking_spot_reviewed,
 }
 
 # Failures that mean "try again later" rather than "this message is broken".

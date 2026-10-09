@@ -171,3 +171,26 @@ def booking_completed_for_owner(spot_title: str) -> PushMessage:
         title="⭐ Calificá al conductor",
         body=f"Terminó la reserva en {spot_title}. Contanos cómo fue el conductor.",
     )
+
+
+def parking_spot_approved(spot_title: str) -> PushMessage:
+    """Sent to the owner when an admin approves their new parking spot: it's published."""
+    return PushMessage(
+        title="✅ ¡Tu cochera fue aprobada!",
+        body=f"{_spot_name(spot_title)} ya está publicada y los conductores pueden reservarla.",
+    )
+
+
+def parking_spot_rejected(spot_title: str, notes: str | None) -> PushMessage:
+    """Sent to the owner when an admin rejects their new parking spot, with the admin's
+    reason when there is one."""
+    note = (notes or "").strip()
+    reason = f" Motivo: {note}{'' if note.endswith(('.', '!', '?')) else '.'}" if note else ""
+    return PushMessage(
+        title="Tu cochera no fue aprobada",
+        body=f"{_spot_name(spot_title)} no se publicó.{reason} Podés corregirla y volver a enviarla.",
+    )
+
+
+def _spot_name(spot_title: str) -> str:
+    return f"«{spot_title}»" if spot_title else "Tu cochera"

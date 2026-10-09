@@ -134,3 +134,21 @@ class SettlementPaidEvent(BaseModel):
     recipient_user_id: str
     net_amount: int
     booking_count: int
+
+
+class ParkingSpotReviewedEvent(BaseModel):
+    """`parking_spot.reviewed` -- published by parking-service when a ParkLink admin
+    approves or rejects a new parking spot (it stays hidden from searches until approved).
+    `decision` is "approved" or "rejected"; `notes` is the admin's reason, if any (always
+    shown to the owner on a rejection)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    event_id: str
+    event_type: str = "parking_spot.reviewed"
+    occurred_at: datetime | None = None
+    parking_spot_id: str
+    parking_spot_title: str = ""
+    owner_user_id: str
+    decision: str
+    notes: str | None = None
