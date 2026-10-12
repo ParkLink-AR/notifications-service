@@ -12,26 +12,45 @@ from sqlalchemy.sql import func
 
 from app.config import settings
 from app.database import SessionLocal
+from app.handlers.account_events import (
+    build_refund_completed_pushes,
+    build_review_received_pushes,
+    build_support_ticket_closed_pushes,
+)
 from app.handlers.booking_cancelled import build_booking_cancelled_pushes
 from app.handlers.booking_completed import build_booking_completed_pushes
 from app.handlers.booking_confirmed import build_booking_confirmed_pushes
 from app.handlers.booking_message_sent import build_booking_message_sent_pushes
 from app.handlers.booking_pending_approval import build_booking_pending_approval_pushes
+from app.handlers.booking_reminders import (
+    build_booking_approval_reminder_pushes,
+    build_booking_ending_soon_pushes,
+    build_booking_starting_soon_pushes,
+    build_booking_verification_reviewed_pushes,
+)
 from app.handlers.booking_verified import build_booking_verified_pushes
 from app.handlers.outbound import OutboundPush
 from app.handlers.parking_spot_reviewed import build_parking_spot_reviewed_pushes
-from app.handlers.settlement_paid import build_settlement_paid_pushes
+from app.handlers.settlement_paid import build_settlement_drafted_pushes, build_settlement_paid_pushes
 from app.handlers.support_ticket_replied import build_support_ticket_replied_pushes
 from app.messaging import live
 from app.messaging.events import (
+    BookingApprovalReminderEvent,
     BookingCancelledEvent,
     BookingCompletedEvent,
     BookingConfirmedEvent,
+    BookingEndingSoonEvent,
     BookingMessageSentEvent,
     BookingPendingApprovalEvent,
+    BookingStartingSoonEvent,
+    BookingVerificationReviewedEvent,
     BookingVerifiedEvent,
     ParkingSpotReviewedEvent,
+    RefundCompletedEvent,
+    ReviewReceivedEvent,
+    SettlementDraftedEvent,
     SettlementPaidEvent,
+    SupportTicketClosedEvent,
     SupportTicketRepliedEvent,
 )
 from app.models import Notification, ProcessedEvent
@@ -49,6 +68,14 @@ BINDING_KEYS = [
     "booking.cancelled",
     "booking.completed",
     "parking_spot.reviewed",
+    "booking.verification_reviewed",
+    "booking.approval_reminder",
+    "booking.starting_soon",
+    "booking.ending_soon",
+    "review.received",
+    "support.ticket_closed",
+    "refund.completed",
+    "settlement.drafted",
 ]
 
 # Events after which a booking request no longer waits for the owner's answer.
@@ -171,6 +198,38 @@ async def _handle_parking_spot_reviewed(body: dict, session_factory=SessionLocal
     await _run(body, ParkingSpotReviewedEvent, build_parking_spot_reviewed_pushes, session_factory)
 
 
+async def _handle_booking_verification_reviewed(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, BookingVerificationReviewedEvent, build_booking_verification_reviewed_pushes, session_factory)
+
+
+async def _handle_booking_approval_reminder(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, BookingApprovalReminderEvent, build_booking_approval_reminder_pushes, session_factory)
+
+
+async def _handle_booking_starting_soon(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, BookingStartingSoonEvent, build_booking_starting_soon_pushes, session_factory)
+
+
+async def _handle_booking_ending_soon(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, BookingEndingSoonEvent, build_booking_ending_soon_pushes, session_factory)
+
+
+async def _handle_review_received(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, ReviewReceivedEvent, build_review_received_pushes, session_factory)
+
+
+async def _handle_support_ticket_closed(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, SupportTicketClosedEvent, build_support_ticket_closed_pushes, session_factory)
+
+
+async def _handle_refund_completed(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, RefundCompletedEvent, build_refund_completed_pushes, session_factory)
+
+
+async def _handle_settlement_drafted(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, SettlementDraftedEvent, build_settlement_drafted_pushes, session_factory)
+
+
 HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.confirmed": _handle_booking_confirmed,
     "booking.pending_approval": _handle_booking_pending_approval,
@@ -181,6 +240,14 @@ HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.cancelled": _handle_booking_cancelled,
     "booking.completed": _handle_booking_completed,
     "parking_spot.reviewed": _handle_parking_spot_reviewed,
+    "booking.verification_reviewed": _handle_booking_verification_reviewed,
+    "booking.approval_reminder": _handle_booking_approval_reminder,
+    "booking.starting_soon": _handle_booking_starting_soon,
+    "booking.ending_soon": _handle_booking_ending_soon,
+    "review.received": _handle_review_received,
+    "support.ticket_closed": _handle_support_ticket_closed,
+    "refund.completed": _handle_refund_completed,
+    "settlement.drafted": _handle_settlement_drafted,
 }
 
 # Failures that mean "try again later" rather than "this message is broken".

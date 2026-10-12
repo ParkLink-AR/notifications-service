@@ -27,7 +27,7 @@ def _event(**overrides) -> BookingPendingApprovalEvent:
 def test_notifies_the_owner_with_the_deadline():
     pushes = build_booking_pending_approval_pushes(_event())
 
-    assert [p.user_id for p in pushes] == [OWNER]
+    assert [p.user_id for p in pushes] == [OWNER, DRIVER]
     assert "reserva para confirmar" in pushes[0].title
     assert "Cochera Palermo" in pushes[0].body
     assert "de 18:00 a 20:00" in pushes[0].body
@@ -38,8 +38,18 @@ def test_notifies_the_owner_with_the_deadline():
 def test_no_deadline_clause_when_deadline_absent():
     pushes = build_booking_pending_approval_pushes(_event(owner_response_deadline=None))
 
-    assert len(pushes) == 1
+    assert len(pushes) == 2
     assert "antes de" not in pushes[0].body
+
+
+def test_tells_the_driver_their_payment_went_through():
+    driver_push = build_booking_pending_approval_pushes(_event())[1]
+
+    assert driver_push.title == "💳 Recibimos tu pago"
+    assert "esperando que el propietario la acepte" in driver_push.body
+    assert driver_push.kind == "driver_payment_received"
+    assert driver_push.role == "driver"
+    assert driver_push.data == {"type": "booking.payment_received", "bookingId": "book-1"}
 
 
 def test_empty_when_no_owner():

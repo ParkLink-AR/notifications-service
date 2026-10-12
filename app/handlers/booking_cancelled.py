@@ -43,9 +43,10 @@ def build_booking_cancelled_pushes(event: BookingCancelledEvent) -> list[Outboun
     if event.cancelled_by == CANCELLED_BY_OWNER_REJECTED:
         return to_driver("driver_rejected", templates.booking_rejected_for_driver(title, event.start, event.end))
     if event.cancelled_by == CANCELLED_BY_OWNER_EXPIRED:
+        # The owner hears about it too: the request they never answered is gone.
         return to_driver(
             "driver_request_expired", templates.booking_request_expired_for_driver(title, event.start, event.end)
-        )
+        ) + to_owner("owner_request_expired", templates.booking_request_expired_for_owner(title, event.start, event.end))
     if event.cancelled_by == CANCELLED_BY_OWNER_ACCOUNT:
         return to_driver(
             "driver_spot_unavailable",

@@ -29,7 +29,8 @@ def _fmt_range(start: datetime, end: datetime) -> str:
     local_end = end.astimezone(BUENOS_AIRES)
     if local_start.date() == local_end.date():
         return f"el {_fmt_date(local_start)}, de {local_start:%H:%M} a {local_end:%H:%M}"
-    return f"del {_fmt_date(local_start)} a las {local_start:%H:%M} al {_fmt_date(local_end)} a las {local_end:%H:%M}"
+    # A multi-day stay: both dates with their times, compact so it reads in one line.
+    return f"del {local_start:%d/%m/%Y %H:%M} al {local_end:%d/%m/%Y %H:%M}"
 
 
 def _fmt_date(local: datetime) -> str:
@@ -194,3 +195,121 @@ def parking_spot_rejected(spot_title: str, notes: str | None) -> PushMessage:
 
 def _spot_name(spot_title: str) -> str:
     return f"«{spot_title}»" if spot_title else "Tu cochera"
+
+
+def _fmt_time(when: datetime) -> str:
+    return f"{when.astimezone(BUENOS_AIRES):%H:%M}"
+
+
+def payment_received_for_driver(spot_title: str, start: datetime, end: datetime) -> PushMessage:
+    """The driver paid: the booking now waits for the owner to accept it."""
+    return PushMessage(
+        title="💳 Recibimos tu pago",
+        body=(
+            f"Tu reserva en {spot_title} para {_fmt_range(start, end)} está esperando que el "
+            "propietario la acepte. Te avisamos apenas responda."
+        ),
+    )
+
+
+def booking_request_expired_for_owner(spot_title: str, start: datetime, end: datetime) -> PushMessage:
+    """The owner never answered a booking request in time: it was cancelled and refunded."""
+    return PushMessage(
+        title="Se venció una solicitud de reserva",
+        body=(
+            f"No respondiste a tiempo la reserva en {spot_title} para {_fmt_range(start, end)}. "
+            "Se canceló y le devolvimos el pago al conductor."
+        ),
+    )
+
+
+def booking_request_reminder_for_owner(spot_title: str, deadline: datetime | None) -> PushMessage:
+    """A booking request is about to expire unanswered."""
+    until = f" antes de las {_fmt_time(deadline)}" if deadline is not None else ""
+    return PushMessage(
+        title="⏰ Una reserva espera tu respuesta",
+        body=f"Aceptá o rechazá la reserva en {spot_title}{until}, o se cancela sola.",
+    )
+
+
+def payout_approved_for_owner(spot_title: str) -> PushMessage:
+    """An admin approved a booking that ended without its arrival code verified."""
+    return PushMessage(
+        title="✅ Liberamos tu pago",
+        body=f"Revisamos la reserva en {spot_title} que terminó sin el código de llegada: la vas a cobrar en tu próxima liquidación.",
+    )
+
+
+def payout_denied_for_owner(spot_title: str) -> PushMessage:
+    """An admin refunded the driver of a booking that ended without its arrival code verified."""
+    return PushMessage(
+        title="No vas a cobrar una reserva",
+        body=(
+            f"La reserva en {spot_title} terminó sin que cargaras el código de llegada y le devolvimos "
+            "el pago al conductor. Cargá siempre el código cuando llega el conductor."
+        ),
+    )
+
+
+def unverified_refunded_for_driver(spot_title: str) -> PushMessage:
+    """An admin refunded the driver of a booking that ended without its arrival verified."""
+    return PushMessage(
+        title="💸 Te devolvimos el pago",
+        body=f"Revisamos tu reserva en {spot_title}: no se confirmó tu llegada, así que te devolvemos el total.",
+    )
+
+
+def booking_starting_soon_for_driver(spot_title: str, start: datetime) -> PushMessage:
+    return PushMessage(
+        title="🚗 Tu reserva empieza pronto",
+        body=f"Tu lugar en {spot_title} te espera a las {_fmt_time(start)}. Tené a mano tu código de llegada.",
+    )
+
+
+def booking_starting_soon_for_owner(spot_title: str, start: datetime) -> PushMessage:
+    return PushMessage(
+        title="🚗 Llega un conductor",
+        body=f"Una reserva en {spot_title} empieza a las {_fmt_time(start)}. Pedile el código de llegada.",
+    )
+
+
+def stay_ending_for_driver(spot_title: str, end: datetime) -> PushMessage:
+    return PushMessage(
+        title="⏳ Tu estadía está por terminar",
+        body=f"Tu estadía en {spot_title} termina a las {_fmt_time(end)}. Acordate de retirar tu vehículo.",
+    )
+
+
+def review_received(spot_title: str, rating: int, recipient_role: str) -> PushMessage:
+    stars = "★" * max(0, min(rating, 5))
+    who = "el conductor" if recipient_role == "owner" else "el propietario"
+    where = f" por la reserva en {spot_title}" if spot_title else ""
+    return PushMessage(title="⭐ Te dejaron una reseña", body=f"{stars} — {who} te calificó{where}.")
+
+
+def support_ticket_closed(subject: str) -> PushMessage:
+    about = f" «{subject}»" if subject else ""
+    return PushMessage(
+        title="Cerramos tu consulta",
+        body=f"Dimos por resuelta tu consulta{about}. Si necesitás algo más, podés escribirnos de nuevo.",
+    )
+
+
+def refund_completed(amount: int, method: str) -> PushMessage:
+    how = "por otro medio" if method == "manual" else "por Mercado Pago"
+    return PushMessage(
+        title="💸 Se acreditó tu reembolso",
+        body=f"Te devolvimos {_fmt_currency(amount)} {how}. Perdón por la demora.",
+    )
+
+
+def settlement_drafted(net_amount: int, booking_count: int) -> PushMessage:
+    """Sent to the owner when an admin prepares their settlement, before the transfer."""
+    reservas = "reserva" if booking_count == 1 else "reservas"
+    return PushMessage(
+        title="🧾 Estamos preparando tu liquidación",
+        body=(
+            f"Preparamos tu liquidación de {_fmt_currency(net_amount)} por {booking_count} {reservas}. "
+            "Te avisamos cuando hagamos la transferencia."
+        ),
+    )

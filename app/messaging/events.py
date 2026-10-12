@@ -152,3 +152,89 @@ class ParkingSpotReviewedEvent(BaseModel):
     owner_user_id: str
     decision: str
     notes: str | None = None
+
+
+class BookingVerificationReviewedEvent(_BookingEvent):
+    """`booking.verification_reviewed` -- an admin decided on a booking that completed
+    without its arrival code verified: `decision` "approved" (the owner gets paid for it) or
+    "refunded" (the driver got their money back and the owner isn't paid)."""
+
+    event_type: str = "booking.verification_reviewed"
+    decision: str
+
+
+class BookingApprovalReminderEvent(_BookingEvent):
+    """`booking.approval_reminder` -- a booking request is about to expire unanswered."""
+
+    event_type: str = "booking.approval_reminder"
+    owner_response_deadline: datetime | None = None
+
+
+class BookingStartingSoonEvent(_BookingEvent):
+    """`booking.starting_soon` -- a confirmed booking starts within the hour."""
+
+    event_type: str = "booking.starting_soon"
+
+
+class BookingEndingSoonEvent(_BookingEvent):
+    """`booking.ending_soon` -- a stay under way ends within the hour."""
+
+    event_type: str = "booking.ending_soon"
+
+
+class ReviewReceivedEvent(BaseModel):
+    """`review.received` -- one side of a booking reviewed the other (the owner or the
+    driver). `recipient_role` is the reviewed person's side."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    event_id: str
+    event_type: str = "review.received"
+    occurred_at: datetime | None = None
+    booking_id: str
+    parking_spot_id: str = ""
+    parking_spot_title: str = ""
+    reviewer_user_id: str = ""
+    recipient_user_id: str
+    recipient_role: str = ""
+    rating: int
+
+
+class SupportTicketClosedEvent(BaseModel):
+    """`support.ticket_closed` -- ParkLink staff marked a support ticket RESOLVED or CLOSED."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    event_id: str
+    event_type: str = "support.ticket_closed"
+    occurred_at: datetime | None = None
+    ticket_id: str
+    booking_id: str = ""
+    ticket_subject: str = ""
+    recipient_user_id: str
+    recipient_role: str = ""
+    status: str = ""
+
+
+class RefundCompletedEvent(BaseModel):
+    """`refund.completed` -- published by payment-service when a refund that had failed
+    finally reached the driver: Mercado Pago accepted a retry (`method` "mercadopago") or an
+    admin returned the money some other way ("manual"). `amount` is in centavos."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    event_id: str
+    event_type: str = "refund.completed"
+    occurred_at: datetime | None = None
+    booking_id: str
+    parking_spot_id: str | None = None
+    driver_user_id: str
+    amount: int
+    method: str = "mercadopago"
+
+
+class SettlementDraftedEvent(SettlementPaidEvent):
+    """`settlement.drafted` -- an admin prepared a settlement: the owner's pending balance is
+    frozen into it and the bank transfer comes next (announced by `settlement.paid`)."""
+
+    event_type: str = "settlement.drafted"

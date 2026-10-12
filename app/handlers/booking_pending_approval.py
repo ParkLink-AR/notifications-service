@@ -11,8 +11,9 @@ from app.services import templates
 def build_booking_pending_approval_pushes(
     event: BookingPendingApprovalEvent,
 ) -> list[OutboundPush]:
-    """Turns one `booking.pending_approval` event into a single push to the owner:
-    a paid booking is waiting for them to accept or reject it."""
+    """Turns one `booking.pending_approval` event into a push to the owner -- a paid booking
+    is waiting for them to accept or reject it -- and one to the driver: their payment went
+    through and the booking now waits for the owner."""
     if not event.owner_user_id:
         logger.warning(
             f"[booking.pending_approval] event {event.event_id} carries no owner; nothing to send"
@@ -33,9 +34,15 @@ def build_booking_pending_approval_pushes(
     payload["owner_response_deadline"] = (
         event.owner_response_deadline.isoformat() if event.owner_response_deadline else None
     )
+    driver_msg = templates.payment_received_for_driver(title, event.start, event.end)
     return [
         OutboundPush(
             event.owner_user_id, msg.title, msg.body, data,
             kind="owner_request", role="owner", payload=payload,
-        )
+        ),
+        OutboundPush(
+            event.driver_user_id, driver_msg.title, driver_msg.body,
+            {"type": "booking.payment_received", "bookingId": event.booking_id},
+            kind="driver_payment_received", role="driver", payload=booking_payload(event),
+        ),
     ]

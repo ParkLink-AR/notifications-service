@@ -119,7 +119,6 @@ async def test_answering_a_request_resolves_the_owners_notification(db, sent):
     ("cancelled_by", "recipient", "kind"),
     [
         ("owner_rejected", DRIVER, "driver_rejected"),
-        ("owner_expired", DRIVER, "driver_request_expired"),
         ("owner_account", DRIVER, "driver_spot_unavailable"),
         ("driver", OWNER, "owner_booking_cancelled"),
         ("driver_account", OWNER, "owner_booking_cancelled"),
@@ -139,6 +138,19 @@ async def test_cancellation_tells_the_side_that_didnt_cancel(db, sent, cancelled
     assert [p.user_id for p in sent["pushes"]] == [recipient]
 
 
+async def test_an_expired_request_tells_both_sides(db, sent):
+    await consumer_module._handle_booking_cancelled(
+        _booking_event("evt-owner_expired", "booking.cancelled", cancelled_by="owner_expired"),
+        session_factory=TestingSessionLocal,
+    )
+
+    [driver_entry] = _inbox(db, DRIVER)
+    [owner_entry] = _inbox(db, OWNER)
+    assert driver_entry.kind == "driver_request_expired"
+    assert owner_entry.kind == "owner_request_expired"
+    assert owner_entry.role == "owner"
+
+
 async def test_cancelled_request_is_resolved_too(db, sent):
     await consumer_module._handle_booking_pending_approval(
         _booking_event("evt-req", "booking.pending_approval"), session_factory=TestingSessionLocal
@@ -148,7 +160,7 @@ async def test_cancelled_request_is_resolved_too(db, sent):
         session_factory=TestingSessionLocal,
     )
 
-    [request] = _inbox(db, OWNER)
+    request = next(entry for entry in _inbox(db, OWNER) if entry.kind == "owner_request")
     assert request.resolved_at is not None
 
 

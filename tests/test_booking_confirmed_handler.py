@@ -50,4 +50,4 @@ def test_multi_day_stay_names_both_days():
         _event(end=datetime(2026, 9, 6, 21, 0, tzinfo=timezone.utc))  # 6/9 18:00 ART
     )
 
-    assert "del 4 de septiembre de 2026 a las 18:00 al 6 de septiembre de 2026 a las 18:00" in pushes[0].body
+    assert "del 04/09/2026 18:00 al 06/09/2026 18:00" in pushes[0].body
