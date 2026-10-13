@@ -238,3 +238,21 @@ class SettlementDraftedEvent(SettlementPaidEvent):
     frozen into it and the bank transfer comes next (announced by `settlement.paid`)."""
 
     event_type: str = "settlement.drafted"
+
+
+class SupportTicketStaffEvent(BaseModel):
+    """`support.ticket_opened` / `support.ticket_user_message` -- a user opened a support
+    ticket, or wrote on one: ParkLink staff get an email at the support inbox."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    event_id: str
+    event_type: str
+    occurred_at: datetime | None = None
+    ticket_id: str
+    booking_id: str = ""
+    ticket_subject: str = ""
+    author_user_id: str = ""
+    # "driver" or "owner"; empty when booking-service couldn't tell.
+    author_role: str = ""
+    body: str = ""

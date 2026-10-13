@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 import aio_pika
 from loguru import logger
@@ -31,7 +31,11 @@ from app.handlers.booking_reminders import (
 from app.handlers.booking_verified import build_booking_verified_pushes
 from app.handlers.outbound import OutboundPush
 from app.handlers.parking_spot_reviewed import build_parking_spot_reviewed_pushes
-from app.handlers.settlement_paid import build_settlement_drafted_pushes, build_settlement_paid_pushes
+from app.handlers.settlement_paid import (
+    build_settlement_drafted_pushes,
+    build_settlement_paid_pushes,
+)
+from app.handlers.support_staff_alert import build_support_staff_email
 from app.handlers.support_ticket_replied import build_support_ticket_replied_pushes
 from app.messaging import live
 from app.messaging.events import (
@@ -52,9 +56,10 @@ from app.messaging.events import (
     SettlementPaidEvent,
     SupportTicketClosedEvent,
     SupportTicketRepliedEvent,
+    SupportTicketStaffEvent,
 )
 from app.models import Notification, ProcessedEvent
-from app.services import push
+from app.services import email, push
 
 # Add a routing key + an entry in HANDLERS to support another event. Nothing
 # else needs to change.
@@ -76,6 +81,8 @@ BINDING_KEYS = [
     "support.ticket_closed",
     "refund.completed",
     "settlement.drafted",
+    "support.ticket_opened",
+    "support.ticket_user_message",
 ]
 
 # Events after which a booking request no longer waits for the owner's answer.
@@ -230,6 +237,24 @@ async def _handle_settlement_drafted(body: dict, session_factory=SessionLocal) -
     await _run(body, SettlementDraftedEvent, build_settlement_drafted_pushes, session_factory)
 
 
+async def _handle_support_staff_alert(body: dict, session_factory=SessionLocal) -> None:
+    """Emails ParkLink's support inbox about a new ticket or a user's message on one -- no
+    inbox entry or push (it's for staff, not app users). Deduped like every other event."""
+    event = SupportTicketStaffEvent.model_validate(body)
+    db = session_factory()
+    try:
+        if db.get(ProcessedEvent, event.event_id) is not None:
+            logger.info(f"[consumer] event {event.event_id} already processed, skipping")
+            return
+        db.add(ProcessedEvent(event_id=event.event_id, event_type=event.event_type))
+        db.commit()
+    finally:
+        db.close()
+    subject, html = build_support_staff_email(event)
+    sent_ok = email.send_email(settings.SUPPORT_INBOX_EMAIL, subject, html)
+    logger.info(f"[consumer] handled {event.event_type} event={event.event_id} email_sent={sent_ok}")
+
+
 HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.confirmed": _handle_booking_confirmed,
     "booking.pending_approval": _handle_booking_pending_approval,
@@ -248,6 +273,8 @@ HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "support.ticket_closed": _handle_support_ticket_closed,
     "refund.completed": _handle_refund_completed,
     "settlement.drafted": _handle_settlement_drafted,
+    "support.ticket_opened": _handle_support_staff_alert,
+    "support.ticket_user_message": _handle_support_staff_alert,
 }
 
 # Failures that mean "try again later" rather than "this message is broken".

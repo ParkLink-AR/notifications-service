@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     # /run/secrets/firebase-service-account.json by compose. Empty = log-only.
     GOOGLE_APPLICATION_CREDENTIALS: str = "./secrets/firebase-service-account.json"
 
+    # Transactional email through Brevo (same account auth-service uses). Empty key = log-only.
+    BREVO_API_KEY: str = ""
+    EMAIL_FROM: str = "no-reply@mail.parklink.com.ar"
+    EMAIL_FROM_NAME: str = "ParkLink Argentina"
+    # Where ParkLink staff hear about support tickets: a new ticket, or a user writing on one.
+    SUPPORT_INBOX_EMAIL: str = "contacto@parklink.com.ar"
+    # The admin panel's base URL, for the "open the ticket" link in those emails. Empty = no link.
+    ADMIN_PANEL_URL: str = ""
+
     # The AMQP consumer starts with the app. Disabled in the test suite.
     CONSUMER_ENABLED: bool = True
 
