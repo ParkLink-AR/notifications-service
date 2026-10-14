@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     EMAIL_FROM_NAME: str = "ParkLink Argentina"
     # Where ParkLink staff hear about support tickets: a new ticket, or a user writing on one.
     SUPPORT_INBOX_EMAIL: str = "contacto@parklink.com.ar"
+    # auth-service, for the accounts an admin's announcement goes to (see app/api/broadcasts.py).
+    AUTH_SERVICE_URL: str = "http://auth-service:8000"
+
     # The admin panel's base URL, for the "open the ticket" link in those emails. Empty = no link.
     ADMIN_PANEL_URL: str = ""
 

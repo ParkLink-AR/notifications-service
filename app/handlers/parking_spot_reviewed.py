@@ -16,6 +16,12 @@ def build_parking_spot_reviewed_pushes(event: ParkingSpotReviewedEvent) -> list[
     elif event.decision == "rejected":
         msg = templates.parking_spot_rejected(event.parking_spot_title, event.notes)
         kind = "owner_spot_rejected"
+    elif event.decision == "suspended":
+        msg = templates.parking_spot_suspended(event.parking_spot_title, event.notes)
+        kind = "owner_spot_suspended"
+    elif event.decision == "restored":
+        msg = templates.parking_spot_restored(event.parking_spot_title)
+        kind = "owner_spot_restored"
     else:
         logger.warning(f"[parking_spot.reviewed] event {event.event_id} has unknown decision '{event.decision}'")
         return []

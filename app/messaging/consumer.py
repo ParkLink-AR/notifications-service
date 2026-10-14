@@ -17,6 +17,7 @@ from app.handlers.account_events import (
     build_review_received_pushes,
     build_support_ticket_closed_pushes,
 )
+from app.handlers.booking_admin_action import build_booking_admin_action_pushes
 from app.handlers.booking_cancelled import build_booking_cancelled_pushes
 from app.handlers.booking_completed import build_booking_completed_pushes
 from app.handlers.booking_confirmed import build_booking_confirmed_pushes
@@ -39,6 +40,7 @@ from app.handlers.support_staff_alert import build_support_staff_email
 from app.handlers.support_ticket_replied import build_support_ticket_replied_pushes
 from app.messaging import live
 from app.messaging.events import (
+    BookingAdminActionEvent,
     BookingApprovalReminderEvent,
     BookingCancelledEvent,
     BookingCompletedEvent,
@@ -83,6 +85,7 @@ BINDING_KEYS = [
     "settlement.drafted",
     "support.ticket_opened",
     "support.ticket_user_message",
+    "booking.admin_action",
 ]
 
 # Events after which a booking request no longer waits for the owner's answer.
@@ -237,6 +240,10 @@ async def _handle_settlement_drafted(body: dict, session_factory=SessionLocal) -
     await _run(body, SettlementDraftedEvent, build_settlement_drafted_pushes, session_factory)
 
 
+async def _handle_booking_admin_action(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, BookingAdminActionEvent, build_booking_admin_action_pushes, session_factory)
+
+
 async def _handle_support_staff_alert(body: dict, session_factory=SessionLocal) -> None:
     """Emails ParkLink's support inbox about a new ticket or a user's message on one -- no
     inbox entry or push (it's for staff, not app users). Deduped like every other event."""
@@ -275,6 +282,7 @@ HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "settlement.drafted": _handle_settlement_drafted,
     "support.ticket_opened": _handle_support_staff_alert,
     "support.ticket_user_message": _handle_support_staff_alert,
+    "booking.admin_action": _handle_booking_admin_action,
 }
 
 # Failures that mean "try again later" rather than "this message is broken".

@@ -7,8 +7,8 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy import text
 
-from app.trusted_caller import TrustedCallerMiddleware
 from app import models  # noqa: F401  -- registers models on Base before create_all
+from app.api.broadcasts import router as broadcasts_router
 from app.api.inbox import internal_router as internal_inbox_router
 from app.api.inbox import router as inbox_router
 from app.api.tokens import internal_router as internal_tokens_router
@@ -18,6 +18,7 @@ from app.database import Base, SessionLocal, engine
 from app.logger import setup_logger
 from app.messaging.consumer import Consumer
 from app.services import push
+from app.trusted_caller import TrustedCallerMiddleware
 
 setup_logger()
 
@@ -63,6 +64,7 @@ app.add_middleware(
 )
 
 app.include_router(tokens_router)
+app.include_router(broadcasts_router)
 app.include_router(internal_tokens_router)
 app.include_router(inbox_router)
 app.include_router(internal_inbox_router)

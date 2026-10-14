@@ -313,3 +313,55 @@ def settlement_drafted(net_amount: int, booking_count: int) -> PushMessage:
             "Te avisamos cuando hagamos la transferencia."
         ),
     )
+
+
+def parking_spot_suspended(spot_title: str, notes: str | None) -> PushMessage:
+    """ParkLink suspended a published spot (a report, a problem): it's hidden until restored."""
+    note = (notes or "").strip()
+    reason = f" Motivo: {note}{'' if note.endswith(('.', '!', '?')) else '.'}" if note else ""
+    return PushMessage(
+        title="ParkLink suspendió tu cochera",
+        body=f"{_spot_name(spot_title)} dejó de mostrarse y no recibe reservas nuevas.{reason} Escribinos desde Ayuda si querés revisarlo.",
+    )
+
+
+def parking_spot_restored(spot_title: str) -> PushMessage:
+    """ParkLink restored a spot it had suspended."""
+    return PushMessage(
+        title="✅ Tu cochera volvió a estar publicada",
+        body=f"{_spot_name(spot_title)} ya se muestra de nuevo y puede recibir reservas.",
+    )
+
+
+def _refund_text(refunded_centavos: int) -> str:
+    pesos = refunded_centavos / 100
+    return f"${pesos:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def booking_admin_cancelled_for_driver(spot_title: str, start: datetime, end: datetime, refunded: int) -> PushMessage:
+    refund = f" Te devolvemos {_refund_text(refunded)} al mismo medio de pago." if refunded > 0 else ""
+    return PushMessage(
+        title="ParkLink canceló tu reserva",
+        body=f"Cancelamos tu reserva en {spot_title} para {_fmt_range(start, end)}.{refund}",
+    )
+
+
+def booking_admin_cancelled_for_owner(spot_title: str, start: datetime, end: datetime) -> PushMessage:
+    return PushMessage(
+        title="ParkLink canceló una reserva",
+        body=f"Cancelamos la reserva en {spot_title} para {_fmt_range(start, end)}. El horario vuelve a estar libre.",
+    )
+
+
+def booking_admin_refunded_for_driver(spot_title: str, refunded: int) -> PushMessage:
+    return PushMessage(
+        title="Te devolvimos dinero de una reserva",
+        body=f"Te devolvemos {_refund_text(refunded)} de tu reserva en {spot_title}, al mismo medio de pago.",
+    )
+
+
+def booking_admin_refunded_for_owner(spot_title: str, refunded: int) -> PushMessage:
+    return PushMessage(
+        title="Se reembolsó parte de una reserva",
+        body=f"ParkLink le devolvió {_refund_text(refunded)} al conductor de una reserva en {spot_title}. Tu cobro por esa reserva se ajusta en la misma proporción.",
+    )

@@ -256,3 +256,13 @@ class SupportTicketStaffEvent(BaseModel):
     # "driver" or "owner"; empty when booking-service couldn't tell.
     author_role: str = ""
     body: str = ""
+
+
+class BookingAdminActionEvent(_BookingEvent):
+    """`booking.admin_action` -- ParkLink staff cancelled a booking (action "cancelled") or
+    refunded (part of) a finished one (action "refunded") from the admin panel.
+    `refunded_amount` is what went back to the driver, in centavos."""
+
+    event_type: str = "booking.admin_action"
+    action: str
+    refunded_amount: int = 0
