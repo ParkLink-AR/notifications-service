@@ -43,3 +43,17 @@ def test_is_permanent_classifies_fcm_errors():
 
     assert push._is_permanent(Transient()) is False
     assert push._is_permanent(None) is False
+
+
+def test_push_data_carries_the_inbox_role():
+    data = push._push_data(OutboundPush(USER_A, "t", "b", {"type": "booking.message_sent"}, kind="message_received", role="owner"))
+
+    assert data == {"type": "booking.message_sent", "role": "owner"}
+
+
+def test_push_data_keeps_an_explicit_role_and_skips_roleless():
+    explicit = OutboundPush(USER_A, "t", "b", {"type": "x", "role": "driver"}, role="owner")
+    roleless = OutboundPush(USER_A, "t", "b", {"type": "announcement"}, kind="announcement")
+
+    assert push._push_data(explicit)["role"] == "driver"
+    assert "role" not in push._push_data(roleless)

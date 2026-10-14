@@ -86,6 +86,15 @@ def _is_permanent(exc: Exception | None) -> bool:
     return "not-registered" in code or "invalid-argument" in code
 
 
+
+def _push_data(push: OutboundPush) -> dict[str, str]:
+    """The push's data, always saying which side of the app it's for (the inbox entry's
+    role) -- tapping it switches the app to that mode before opening the screen."""
+    data = {k: str(v) for k, v in push.data.items()}
+    if push.role and "role" not in data:
+        data["role"] = push.role
+    return data
+
 def send_pushes(db: Session, pushes: list[OutboundPush]) -> int:
     """Deliver each OutboundPush to every registered device of its recipient.
     Returns the number of messages FCM accepted (or, in log-only mode, the
@@ -113,7 +122,7 @@ def send_pushes(db: Session, pushes: list[OutboundPush]) -> int:
         messaging.Message(
             token=token,
             notification=messaging.Notification(title=push.title, body=push.body),
-            data={k: str(v) for k, v in push.data.items()},
+            data=_push_data(push),
             android=messaging.AndroidConfig(
                 priority="high",
                 # Small icon comes from the app's expo-notifications config

@@ -365,3 +365,37 @@ def booking_admin_refunded_for_owner(spot_title: str, refunded: int) -> PushMess
         title="Se reembolsó parte de una reserva",
         body=f"ParkLink le devolvió {_refund_text(refunded)} al conductor de una reserva en {spot_title}. Tu cobro por esa reserva se ajusta en la misma proporción.",
     )
+
+
+def booking_cancelled_by_owner_for_driver(spot_title: str, start: datetime, end: datetime, note: str) -> PushMessage:
+    """The owner called off a booking they had accepted: the driver gets everything back."""
+    reason = f" Motivo: {note}" if note else ""
+    return PushMessage(
+        title="El propietario canceló tu reserva",
+        body=f"Se canceló tu reserva en {spot_title} para {_fmt_range(start, end)}. Te devolvemos el total.{reason}",
+    )
+
+
+def booking_late_cancelled_for_owner(spot_title: str, start: datetime, end: datetime) -> PushMessage:
+    """The driver cancelled in the booking's last hour: the owner still gets part of it."""
+    return PushMessage(
+        title="Se canceló una reserva",
+        body=(
+            f"El conductor canceló su reserva en {spot_title} para {_fmt_range(start, end)} con menos de una hora "
+            "de anticipación. Igual cobrás la mitad."
+        ),
+    )
+
+
+def booking_extended_for_driver(spot_title: str, end: datetime) -> PushMessage:
+    return PushMessage(
+        title="✅ Extendiste tu reserva",
+        body=f"Tu lugar en {spot_title} ahora es tuyo hasta las {end.astimezone(BUENOS_AIRES):%H:%M}.",
+    )
+
+
+def booking_extended_for_owner(spot_title: str, end: datetime) -> PushMessage:
+    return PushMessage(
+        title="Extendieron una reserva",
+        body=f"El conductor extendió su reserva en {spot_title} hasta las {end.astimezone(BUENOS_AIRES):%H:%M}.",
+    )

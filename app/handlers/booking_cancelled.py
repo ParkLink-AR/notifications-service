@@ -10,6 +10,7 @@ CANCELLED_BY_OWNER_EXPIRED = "owner_expired"
 CANCELLED_BY_DRIVER = "driver"
 CANCELLED_BY_OWNER_ACCOUNT = "owner_account"
 CANCELLED_BY_DRIVER_ACCOUNT = "driver_account"
+CANCELLED_BY_OWNER = "owner_cancelled"
 
 
 def build_booking_cancelled_pushes(event: BookingCancelledEvent) -> list[OutboundPush]:
@@ -21,6 +22,10 @@ def build_booking_cancelled_pushes(event: BookingCancelledEvent) -> list[Outboun
     title = event.parking_spot_title or templates.DEFAULT_TITLE
     data = {"type": "booking.cancelled", "bookingId": event.booking_id}
     payload = booking_payload(event)
+    if event.note:
+        payload["notes"] = event.note
+    if event.refunded_amount:
+        payload["refunded_amount"] = event.refunded_amount
 
     def to_driver(kind: str, message: templates.PushMessage) -> list[OutboundPush]:
         return [
@@ -52,6 +57,13 @@ def build_booking_cancelled_pushes(event: BookingCancelledEvent) -> list[Outboun
             "driver_spot_unavailable",
             templates.booking_cancelled_by_owner_account_for_driver(title, event.start, event.end),
         )
+    if event.cancelled_by == CANCELLED_BY_OWNER:
+        return to_driver(
+            "driver_owner_cancelled",
+            templates.booking_cancelled_by_owner_for_driver(title, event.start, event.end, event.note),
+        )
+    if event.cancelled_by == CANCELLED_BY_DRIVER and event.refunded_amount:
+        return to_owner("owner_booking_cancelled", templates.booking_late_cancelled_for_owner(title, event.start, event.end))
     if event.cancelled_by == CANCELLED_BY_DRIVER:
         return to_owner(
             "owner_booking_cancelled", templates.booking_cancelled_by_driver_for_owner(title, event.start, event.end)
