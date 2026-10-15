@@ -19,6 +19,7 @@ from app.logger import setup_logger
 from app.messaging.consumer import Consumer
 from app.services import push
 from app.trusted_caller import TrustedCallerMiddleware
+from app.monitoring import init_monitoring
 
 setup_logger()
 
@@ -50,6 +51,8 @@ async def lifespan(app: FastAPI):
             pass
     logger.info("[SHUTDOWN] ParkLink Notifications Service detenido")
 
+
+init_monitoring()
 
 app = FastAPI(title="ParkLink Notifications Service", version="1.0.0", lifespan=lifespan)
 
