@@ -26,7 +26,10 @@ from app.handlers.booking_message_sent import build_booking_message_sent_pushes
 from app.handlers.booking_pending_approval import build_booking_pending_approval_pushes
 from app.handlers.booking_reminders import (
     build_booking_approval_reminder_pushes,
+    build_booking_ended_pushes,
     build_booking_ending_soon_pushes,
+    build_booking_hourly_ending_soon_pushes,
+    build_booking_overstay_charged_pushes,
     build_booking_starting_soon_pushes,
     build_booking_verification_reviewed_pushes,
 )
@@ -47,8 +50,11 @@ from app.messaging.events import (
     BookingCancelledEvent,
     BookingCompletedEvent,
     BookingConfirmedEvent,
+    BookingEndedEvent,
     BookingEndingSoonEvent,
+    BookingHourlyEndingSoonEvent,
     BookingMessageSentEvent,
+    BookingOverstayChargedEvent,
     BookingPendingApprovalEvent,
     BookingStartingSoonEvent,
     BookingVerificationReviewedEvent,
@@ -81,6 +87,9 @@ BINDING_KEYS = [
     "booking.approval_reminder",
     "booking.starting_soon",
     "booking.ending_soon",
+    "booking.hourly_ending_soon",
+    "booking.ended",
+    "booking.overstay_charged",
     "review.received",
     "support.ticket_closed",
     "refund.completed",
@@ -227,6 +236,18 @@ async def _handle_booking_ending_soon(body: dict, session_factory=SessionLocal) 
     await _run(body, BookingEndingSoonEvent, build_booking_ending_soon_pushes, session_factory)
 
 
+async def _handle_booking_hourly_ending_soon(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, BookingHourlyEndingSoonEvent, build_booking_hourly_ending_soon_pushes, session_factory)
+
+
+async def _handle_booking_ended(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, BookingEndedEvent, build_booking_ended_pushes, session_factory)
+
+
+async def _handle_booking_overstay_charged(body: dict, session_factory=SessionLocal) -> None:
+    await _run(body, BookingOverstayChargedEvent, build_booking_overstay_charged_pushes, session_factory)
+
+
 async def _handle_review_received(body: dict, session_factory=SessionLocal) -> None:
     await _run(body, ReviewReceivedEvent, build_review_received_pushes, session_factory)
 
@@ -283,6 +304,9 @@ HANDLERS: dict[str, Callable[[dict], Awaitable[None]]] = {
     "booking.approval_reminder": _handle_booking_approval_reminder,
     "booking.starting_soon": _handle_booking_starting_soon,
     "booking.ending_soon": _handle_booking_ending_soon,
+    "booking.hourly_ending_soon": _handle_booking_hourly_ending_soon,
+    "booking.ended": _handle_booking_ended,
+    "booking.overstay_charged": _handle_booking_overstay_charged,
     "review.received": _handle_review_received,
     "support.ticket_closed": _handle_support_ticket_closed,
     "refund.completed": _handle_refund_completed,

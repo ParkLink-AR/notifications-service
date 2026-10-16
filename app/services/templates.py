@@ -280,6 +280,42 @@ def stay_ending_for_driver(spot_title: str, end: datetime) -> PushMessage:
     )
 
 
+def hourly_ending_for_driver(spot_title: str, end: datetime) -> PushMessage:
+    """Minutes before an hourly booking ends: time to extend it or head out."""
+    return PushMessage(
+        title="⏳ Tu reserva termina en unos minutos",
+        body=f"Tu reserva en {spot_title} termina a las {_fmt_time(end)}. "
+        "¿Necesitás más tiempo? Podés extenderla desde la app.",
+    )
+
+
+def booking_ended_for_driver(spot_title: str) -> PushMessage:
+    """The booking is over and its exit code is still to be entered."""
+    return PushMessage(
+        title="⌛ Tu reserva terminó",
+        body=f"Tu reserva en {spot_title} venció. Retirá tu vehículo y pasale el código de salida "
+        "al propietario.",
+    )
+
+
+def overstay_charged_for_driver(spot_title: str, minutes: int, amount: int) -> PushMessage:
+    """The driver stayed past the grace period: what they owe now rides on their next reservation."""
+    return PushMessage(
+        title="💳 Se generó un saldo por exceso de tiempo",
+        body=f"Te quedaste {minutes} min de más en {spot_title}: se generó un saldo de {_fmt_currency(amount)}. "
+        "Se suma a tu próxima reserva y vas a ver el detalle antes de pagar.",
+    )
+
+
+def overstay_paid_for_owner(spot_title: str, minutes: int, amount: int) -> PushMessage:
+    """The driver stayed past the grace period: ParkLink pays the owner for the extra time."""
+    return PushMessage(
+        title="💰 Te corresponde un adicional",
+        body=f"El conductor se quedó {minutes} min de más en {spot_title}: te corresponden "
+        f"{_fmt_currency(amount)} más, que ParkLink te liquida junto con tus cobros.",
+    )
+
+
 def review_received(spot_title: str, rating: int, recipient_role: str) -> PushMessage:
     stars = "★" * max(0, min(rating, 5))
     who = "el conductor" if recipient_role == "owner" else "el propietario"

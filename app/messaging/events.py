@@ -187,6 +187,29 @@ class BookingEndingSoonEvent(_BookingEvent):
     event_type: str = "booking.ending_soon"
 
 
+class BookingHourlyEndingSoonEvent(_BookingEvent):
+    """`booking.hourly_ending_soon` -- an hourly booking under way ends within minutes."""
+
+    event_type: str = "booking.hourly_ending_soon"
+
+
+class BookingEndedEvent(_BookingEvent):
+    """`booking.ended` -- a verified hourly booking is over and still waits for its exit code."""
+
+    event_type: str = "booking.ended"
+
+
+class BookingOverstayChargedEvent(_BookingEvent):
+    """`booking.overstay_charged` -- the driver stayed past the grace period of a booking's end
+    and the extra time is charged: `driver_amount` (centavos) is a balance they owe, added to
+    their next reservation; `owner_amount` is what ParkLink pays the owner for it."""
+
+    event_type: str = "booking.overstay_charged"
+    overstay_minutes: int
+    driver_amount: int
+    owner_amount: int
+
+
 class ReviewReceivedEvent(BaseModel):
     """`review.received` -- one side of a booking reviewed the other (the owner or the
     driver). `recipient_role` is the reviewed person's side."""

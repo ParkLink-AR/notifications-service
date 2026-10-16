@@ -4,7 +4,10 @@ from app.handlers.outbound import OutboundPush
 from app.handlers.payloads import booking_payload
 from app.messaging.events import (
     BookingApprovalReminderEvent,
+    BookingEndedEvent,
     BookingEndingSoonEvent,
+    BookingHourlyEndingSoonEvent,
+    BookingOverstayChargedEvent,
     BookingStartingSoonEvent,
     BookingVerificationReviewedEvent,
 )
@@ -82,3 +85,48 @@ def build_booking_ending_soon_pushes(event: BookingEndingSoonEvent) -> list[Outb
         {"type": "booking.ending_soon", "bookingId": event.booking_id},
         kind="driver_stay_ending", role="driver", payload=booking_payload(event),
     )]
+
+
+def build_booking_hourly_ending_soon_pushes(event: BookingHourlyEndingSoonEvent) -> list[OutboundPush]:
+    """An hourly booking ends in minutes: the driver, in time to extend it or head out."""
+    title = event.parking_spot_title or templates.DEFAULT_TITLE
+    msg = templates.hourly_ending_for_driver(title, event.end)
+    return [OutboundPush(
+        event.driver_user_id, msg.title, msg.body,
+        {"type": "booking.hourly_ending_soon", "bookingId": event.booking_id, "role": "driver"},
+        kind="driver_hourly_ending", role="driver", payload=booking_payload(event),
+    )]
+
+
+def build_booking_ended_pushes(event: BookingEndedEvent) -> list[OutboundPush]:
+    """A verified hourly booking is over and waits for its exit code: the driver, to head out
+    and give the owner the code."""
+    title = event.parking_spot_title or templates.DEFAULT_TITLE
+    msg = templates.booking_ended_for_driver(title)
+    return [OutboundPush(
+        event.driver_user_id, msg.title, msg.body,
+        {"type": "booking.ended", "bookingId": event.booking_id, "role": "driver"},
+        kind="driver_booking_ended", role="driver", payload=booking_payload(event),
+    )]
+
+
+def build_booking_overstay_charged_pushes(event: BookingOverstayChargedEvent) -> list[OutboundPush]:
+    """The driver stayed past the grace period of a booking's end: they are told the balance that
+    now rides on their next reservation; the owner, what ParkLink pays them for the extra time."""
+    title = event.parking_spot_title or templates.DEFAULT_TITLE
+    payload = booking_payload(event)
+    payload["overstay_minutes"] = event.overstay_minutes
+    msg = templates.overstay_charged_for_driver(title, event.overstay_minutes, event.driver_amount)
+    pushes = [OutboundPush(
+        event.driver_user_id, msg.title, msg.body,
+        {"type": "booking.overstay_charged", "bookingId": event.booking_id, "role": "driver"},
+        kind="driver_overstay_charged", role="driver", payload={**payload, "overstay_amount": event.driver_amount},
+    )]
+    if event.owner_user_id and event.owner_user_id != event.driver_user_id and event.owner_amount > 0:
+        owner_msg = templates.overstay_paid_for_owner(title, event.overstay_minutes, event.owner_amount)
+        pushes.append(OutboundPush(
+            event.owner_user_id, owner_msg.title, owner_msg.body,
+            {"type": "booking.overstay_charged", "bookingId": event.booking_id, "role": "owner"},
+            kind="owner_overstay_paid", role="owner", payload={**payload, "overstay_amount": event.owner_amount},
+        ))
+    return pushes
