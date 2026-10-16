@@ -91,6 +91,64 @@ async def test_ending_soon_tells_the_driver(db, sent):
     assert "termina a las 14:00" in sent[0].body
 
 
+async def test_hourly_ending_soon_tells_the_driver_they_can_extend(db, sent):
+    await consumer_module._handle_booking_hourly_ending_soon(
+        _booking("evt-hourly-end", "booking.hourly_ending_soon"), session_factory=TestingSessionLocal
+    )
+    [entry] = _inbox(db, DRIVER)
+    assert (entry.kind, entry.role) == ("driver_hourly_ending", "driver")
+    assert "termina a las 14:00" in sent[0].body
+    assert "extenderla" in sent[0].body
+    assert sent[0].data["type"] == "booking.hourly_ending_soon"
+    assert sent[0].data["bookingId"] == "book-1"
+    assert not _inbox(db, OWNER)
+
+
+async def test_booking_ended_asks_the_driver_for_the_exit_code(db, sent):
+    await consumer_module._handle_booking_ended(
+        _booking("evt-ended", "booking.ended"), session_factory=TestingSessionLocal
+    )
+    [entry] = _inbox(db, DRIVER)
+    assert (entry.kind, entry.role) == ("driver_booking_ended", "driver")
+    assert "código de salida" in sent[0].body
+    assert "Cochera Palermo" in sent[0].body
+    assert sent[0].data["type"] == "booking.ended"
+    assert not _inbox(db, OWNER)
+
+
+async def test_overstay_charged_tells_the_driver_what_they_owe_and_the_owner_what_they_are_paid(db, sent):
+    event = {
+        **_booking("evt-overstay", "booking.overstay_charged"),
+        "overstay_minutes": 20, "driver_amount": 80000, "owner_amount": 66667,
+    }
+    await consumer_module._handle_booking_overstay_charged(event, session_factory=TestingSessionLocal)
+
+    [driver_entry] = _inbox(db, DRIVER)
+    assert (driver_entry.kind, driver_entry.role) == ("driver_overstay_charged", "driver")
+    assert driver_entry.data["overstay_amount"] == 80000
+    [owner_entry] = _inbox(db, OWNER)
+    assert (owner_entry.kind, owner_entry.role) == ("owner_overstay_paid", "owner")
+    assert owner_entry.data["overstay_amount"] == 66667
+    driver_push = next(push for push in sent if push.data["role"] == "driver")
+    owner_push = next(push for push in sent if push.data["role"] == "owner")
+    assert "se generó un saldo de $800,00" in driver_push.body
+    assert "20 min" in driver_push.body and "Cochera Palermo" in driver_push.body
+    assert "próxima reserva" in driver_push.body
+    assert "$666,67" in owner_push.body
+    assert driver_push.data["type"] == owner_push.data["type"] == "booking.overstay_charged"
+
+
+async def test_overstay_charged_does_not_notify_an_owner_who_is_the_driver(db, sent):
+    event = {
+        **_booking("evt-overstay-self", "booking.overstay_charged"),
+        "owner_user_id": DRIVER, "overstay_minutes": 20, "driver_amount": 80000, "owner_amount": 66667,
+    }
+    await consumer_module._handle_booking_overstay_charged(event, session_factory=TestingSessionLocal)
+
+    assert len(_inbox(db, DRIVER)) == 1
+    assert len(sent) == 1
+
+
 async def test_review_received_tells_the_reviewed_person(db, sent):
     await consumer_module._handle_review_received(
         {
@@ -132,7 +190,7 @@ async def test_refund_completed_tells_the_driver(db, sent):
 def test_every_new_event_is_bound_and_dispatched():
     for key in [
         "booking.verification_reviewed", "booking.approval_reminder", "booking.starting_soon",
-        "booking.ending_soon", "review.received", "support.ticket_closed", "refund.completed",
+        "booking.ending_soon", "booking.overstay_charged", "review.received", "support.ticket_closed", "refund.completed",
         "settlement.drafted",
     ]:
         assert key in consumer_module.BINDING_KEYS
