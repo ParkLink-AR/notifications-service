@@ -134,7 +134,11 @@ async def test_overstay_charged_tells_the_driver_what_they_owe_and_the_owner_wha
     assert "se generó un saldo de $800,00" in driver_push.body
     assert "20 min" in driver_push.body and "Cochera Palermo" in driver_push.body
     assert "próxima reserva" in driver_push.body
-    assert "$666,67" in owner_push.body
+    assert owner_push.title == "💰 La reserva duró más de lo esperado"
+    assert owner_push.body == (
+        "Se acreditará un monto extra de $666,67 por la reserva en Cochera Palermo "
+        "el 14 de octubre de 2026, de 12:00 a 14:00."
+    )
     assert driver_push.data["type"] == owner_push.data["type"] == "booking.overstay_charged"
 
 

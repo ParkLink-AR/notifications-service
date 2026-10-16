@@ -307,12 +307,12 @@ def overstay_charged_for_driver(spot_title: str, minutes: int, amount: int) -> P
     )
 
 
-def overstay_paid_for_owner(spot_title: str, minutes: int, amount: int) -> PushMessage:
+def overstay_paid_for_owner(spot_title: str, start: datetime, end: datetime, amount: int) -> PushMessage:
     """The driver stayed past the grace period: ParkLink pays the owner for the extra time."""
     return PushMessage(
-        title="💰 Te corresponde un adicional",
-        body=f"El conductor se quedó {minutes} min de más en {spot_title}: te corresponden "
-        f"{_fmt_currency(amount)} más, que ParkLink te liquida junto con tus cobros.",
+        title="💰 La reserva duró más de lo esperado",
+        body=f"Se acreditará un monto extra de {_fmt_currency(amount)} por la reserva en {spot_title} "
+        f"{_fmt_range(start, end)}.",
     )
 
 

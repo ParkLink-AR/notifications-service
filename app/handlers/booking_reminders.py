@@ -123,7 +123,7 @@ def build_booking_overstay_charged_pushes(event: BookingOverstayChargedEvent) ->
         kind="driver_overstay_charged", role="driver", payload={**payload, "overstay_amount": event.driver_amount},
     )]
     if event.owner_user_id and event.owner_user_id != event.driver_user_id and event.owner_amount > 0:
-        owner_msg = templates.overstay_paid_for_owner(title, event.overstay_minutes, event.owner_amount)
+        owner_msg = templates.overstay_paid_for_owner(title, event.start, event.end, event.owner_amount)
         pushes.append(OutboundPush(
             event.owner_user_id, owner_msg.title, owner_msg.body,
             {"type": "booking.overstay_charged", "bookingId": event.booking_id, "role": "owner"},
