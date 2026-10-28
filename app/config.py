@@ -1,3 +1,5 @@
+import sys
+
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
@@ -51,4 +53,5 @@ class Settings(BaseSettings):
     model_config = ConfigDict(extra="ignore", env_file=".env", env_file_encoding="utf-8")
 
 
-settings = Settings()
+# Tests must not pick up the developer's real .env (real Brevo key, secrets).
+settings = Settings(_env_file=None if "pytest" in sys.modules else ".env")
